@@ -22,8 +22,6 @@ var (
 	flagURL           string
 	flagDryRun        bool
 	flagVerbose       bool
-	flagNoResume      bool
-	flagClearState    bool
 	flagServePort     string
 	flagGRPCAddr      string
 )

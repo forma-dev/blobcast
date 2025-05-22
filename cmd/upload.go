@@ -34,9 +34,8 @@ func init() {
 	// Add local flags for the upload command
 	uploadCmd.Flags().StringVarP(&flagDir, "dir", "d", "", "Directory to upload")
 	uploadCmd.Flags().StringVarP(&flagFile, "file", "f", "", "File to upload")
-	uploadCmd.Flags().StringVar(&flagMaxBlobSize, "max-blob-size", "1.5MB", "Max file chunk size (e.g., 1.5MB, 1024KB)")
-	uploadCmd.Flags().StringVar(&flagMaxTxSize, "max-tx-size", "32MB", "Max transaction size (e.g., 32MB, 2097152B)")
-	uploadCmd.Flags().BoolVar(&flagNoResume, "no-resume", false, "Ignore existing upload state and start fresh")
+	uploadCmd.Flags().StringVar(&flagMaxBlobSize, "max-blob-size", "384KB", "Max file chunk size (e.g., 1.5MB, 1024KB)")
+	uploadCmd.Flags().StringVar(&flagMaxTxSize, "max-tx-size", "2MB", "Max transaction size (e.g., 32MB, 2097152B)")
 	uploadCmd.Flags().StringVar(&flagGRPCAddr, "storage-grpc", getEnvWithDefault("BLOBCAST_STORAGE_GRPC", "127.0.0.1:50051"), "gRPC address for storage service")
 }
 
