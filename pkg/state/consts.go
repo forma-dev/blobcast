@@ -8,7 +8,7 @@ const (
 	ManifestStateDb = "manifest.db"
 	UploadStateDb   = "upload.db"
 
-	StartHeightMocha    = 6300000
-	StartHeightMammoth  = 1000000
+	StartHeightMocha    = 6304513
+	StartHeightMammoth  = 775060
 	StartHeightCelestia = 1000000 // mainnet
 )
