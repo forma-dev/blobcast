@@ -148,6 +148,4 @@ Blobcast ships with a single executable `blobcast` that groups several sub-comma
 
 ## Future work
 
-* Gossip network for manifest/chunk exchange & replication.
-* Incentives layer (proof-of-storage).
-* Light-client proofs for block inclusion. 
+* Light-client proofs
