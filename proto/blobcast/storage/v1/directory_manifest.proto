@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package blobcast.storage.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1";
+
+import "blobcast/storage/v1/file_reference.proto";
+
+message DirectoryManifest {
+  string manifest_version = 1;
+  string directory_name = 2;
+  repeated FileReference files = 3;
+  bytes directory_hash = 4;
+}

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package blobcast.storage.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1";
+
+message ChunkData {
+  string version = 1;
+  bytes chunk_data = 2;
+}

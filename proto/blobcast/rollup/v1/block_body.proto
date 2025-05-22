@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package blobcast.rollup.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1";
+
+import "blobcast/primitives/v1/blob_identifier.proto";
+
+message BlockBody {
+  repeated blobcast.primitives.v1.BlobIdentifier dirs = 1;
+  repeated blobcast.primitives.v1.BlobIdentifier files = 2;
+  repeated blobcast.primitives.v1.BlobIdentifier chunks = 3;
+}

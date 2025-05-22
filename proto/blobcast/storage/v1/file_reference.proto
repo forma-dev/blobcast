@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package blobcast.storage.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1";
+
+import "blobcast/primitives/v1/blob_identifier.proto";
+
+// Represents a file within the directory structure
+// references the file manifest blob
+message FileReference {
+  blobcast.primitives.v1.BlobIdentifier id = 1;
+  string relative_path = 2;
+}

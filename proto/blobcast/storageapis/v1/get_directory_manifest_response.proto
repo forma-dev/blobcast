@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package blobcast.storageapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1";
+
+import "blobcast/storage/v1/directory_manifest.proto";
+
+message GetDirectoryManifestResponse {
+  blobcast.storage.v1.DirectoryManifest manifest = 1;
+}

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package blobcast.rollup.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1";
+
+import "blobcast/storage/v1/chunk_data.proto";
+import "blobcast/storage/v1/file_manifest.proto";
+import "blobcast/storage/v1/directory_manifest.proto";
+
+message BlobcastEnvelope {
+  oneof payload {
+    blobcast.storage.v1.ChunkData chunk_data = 1;
+    blobcast.storage.v1.FileManifest file_manifest = 2;
+    blobcast.storage.v1.DirectoryManifest directory_manifest = 3;
+  }
+}

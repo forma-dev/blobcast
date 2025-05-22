@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package blobcast.storage.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1";
+
+enum CompressionAlgorithm {
+  COMPRESSION_ALGORITHM_UNSPECIFIED = 0;
+  COMPRESSION_ALGORITHM_NONE = 1;
+  // Future compression algorithms can be added here
+}

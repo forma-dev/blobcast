@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package blobcast.storageapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1";
+
+import "blobcast/primitives/v1/blob_identifier.proto";
+import "google/api/field_behavior.proto";
+
+message GetFileDataRequest {
+  blobcast.primitives.v1.BlobIdentifier id = 1 [(google.api.field_behavior) = REQUIRED];
+}

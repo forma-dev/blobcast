@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package blobcast.primitives.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1";
+
+message BlobIdentifier {
+  uint64 height = 1;
+  bytes commitment = 2;
+}

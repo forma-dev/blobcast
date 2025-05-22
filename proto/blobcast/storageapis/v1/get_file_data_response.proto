@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package blobcast.storageapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1";
+
+import "blobcast/primitives/v1/blob_identifier.proto";
+
+message GetFileDataResponse {
+  blobcast.primitives.v1.BlobIdentifier id = 1;
+  bytes data = 2;
+}

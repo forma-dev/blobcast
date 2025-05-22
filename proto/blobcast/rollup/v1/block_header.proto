@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package blobcast.rollup.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message BlockHeader {
+  uint32 version = 1;
+  string chain_id = 2;
+  uint64 height = 3;
+  uint64 celestia_block_height = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  bytes parent_hash = 6; // bytes32
+  bytes dirs_root = 7; // bytes32
+  bytes files_root = 8; // bytes32
+  bytes chunks_root = 9; // bytes32
+  bytes state_root = 10; // bytes32
+}

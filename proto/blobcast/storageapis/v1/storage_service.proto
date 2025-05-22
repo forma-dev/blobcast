@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package blobcast.storageapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1";
+
+import "blobcast/storageapis/v1/get_directory_manifest_request.proto";
+import "blobcast/storageapis/v1/get_directory_manifest_response.proto";
+import "blobcast/storageapis/v1/get_file_manifest_request.proto";
+import "blobcast/storageapis/v1/get_file_manifest_response.proto";
+import "blobcast/storageapis/v1/get_file_data_request.proto";
+import "blobcast/storageapis/v1/get_file_data_response.proto";
+import "google/api/annotations.proto";
+
+service StorageService {
+  rpc GetDirectoryManifest(GetDirectoryManifestRequest) returns (GetDirectoryManifestResponse) {
+    option (google.api.http) = {
+      get: "/v1/storage/directory/{id}"
+    };
+  }
+  rpc GetFileManifest(GetFileManifestRequest) returns (GetFileManifestResponse) {
+    option (google.api.http) = {
+      get: "/v1/storage/file/{id}"
+    };
+  }
+  rpc GetFileData(GetFileDataRequest) returns (GetFileDataResponse) {
+    option (google.api.http) = {
+      get: "/v1/storage/file/{id}/data"
+    };
+  }
+}
