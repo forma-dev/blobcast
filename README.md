@@ -16,23 +16,23 @@ Blobcast is a minimal based rollup for publishing and retrieving files on top of
 # Clone & build
 $ git clone https://github.com/forma-dev/blobcast.git
 $ cd blobcast
-$ go build ./...
+$ go build -o build/bin/blobcast .
 
 # Start a node (assumes a local celestia light node running on mocha testnet)
-$ blobcast start \
+$ ./build/bin/blobcast start \
     --auth $CELESTIA_NODE_AUTH_TOKEN \
     --rpc  ws://localhost:26658 \
     --grpc-port 50051
 
 # Start the gateway (http://localhost:8080)
-$ blobcast serve --storage-grpc 127.0.0.1:50051 --port 8080
+$ ./build/bin/blobcast serve --port 8080
 
 # Upload a directory
-$ blobcast upload --dir ./my-data \
+$ ./build/bin/blobcast upload --dir ./my-data \
     --auth $CELESTIA_NODE_AUTH_TOKEN
 
 # Upload a file
-$ blobcast upload --file ./my-file.png \
+$ ./build/bin/blobcast upload --file ./my-file.png \
     --auth $CELESTIA_NODE_AUTH_TOKEN
 
 # Browse the file/directory on the gateway
