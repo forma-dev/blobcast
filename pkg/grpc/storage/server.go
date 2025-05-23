@@ -3,8 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/forma-dev/blobcast/pkg/celestia"
-	"github.com/forma-dev/blobcast/pkg/sync"
+	"github.com/forma-dev/blobcast/pkg/api"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,12 +13,10 @@ import (
 
 type StorageServiceServer struct {
 	pbStorageapisV1.UnimplementedStorageServiceServer
-
-	da celestia.BlobStore
 }
 
-func NewStorageServiceServer(da celestia.BlobStore) *StorageServiceServer {
-	return &StorageServiceServer{da: da}
+func NewStorageServiceServer() *StorageServiceServer {
+	return &StorageServiceServer{}
 }
 
 func (s *StorageServiceServer) GetDirectoryManifest(
@@ -27,7 +24,7 @@ func (s *StorageServiceServer) GetDirectoryManifest(
 	req *pbStorageapisV1.GetDirectoryManifestRequest,
 ) (*pbStorageapisV1.GetDirectoryManifestResponse, error) {
 	dirManifestId := types.BlobIdentifierFromProto(req.Id)
-	dirManifest, err := sync.GetDirectoryManifest(ctx, s.da, dirManifestId)
+	dirManifest, err := api.GetDirectoryManifest(ctx, dirManifestId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting directory manifest: %v", err)
 	}
@@ -40,7 +37,7 @@ func (s *StorageServiceServer) GetFileManifest(
 	req *pbStorageapisV1.GetFileManifestRequest,
 ) (*pbStorageapisV1.GetFileManifestResponse, error) {
 	fileManifestId := types.BlobIdentifierFromProto(req.Id)
-	fileManifest, err := sync.GetFileManifest(ctx, s.da, fileManifestId)
+	fileManifest, err := api.GetFileManifest(ctx, fileManifestId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting file manifest: %v", err)
 	}
@@ -53,7 +50,7 @@ func (s *StorageServiceServer) GetFileData(
 	req *pbStorageapisV1.GetFileDataRequest,
 ) (*pbStorageapisV1.GetFileDataResponse, error) {
 	fileManifestId := types.BlobIdentifierFromProto(req.Id)
-	fileData, err := sync.GetFileData(ctx, s.da, fileManifestId, 0)
+	fileData, err := api.GetFileData(ctx, fileManifestId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting file data: %v", err)
 	}

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +24,13 @@ func prefixKey(key []byte, prefix []byte) []byte {
 	copy(prefixedKey, prefix)
 	copy(prefixedKey[len(prefix):], key)
 	return prefixedKey
+}
+
+func prefixHeightKey(height uint64, prefix []byte) []byte {
+	k := make([]byte, len(prefix)+8)
+	copy(k, prefix)
+	binary.BigEndian.PutUint64(k[len(prefix):], height)
+	return k
 }
 
 func SetNetwork(network string) {

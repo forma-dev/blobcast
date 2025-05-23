@@ -96,7 +96,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}
 
 	grpcServer := grpc.NewServer()
-	pbStorageapisV1.RegisterStorageServiceServer(grpcServer, storage.NewStorageServiceServer(celestiaDA))
+	pbStorageapisV1.RegisterStorageServiceServer(grpcServer, storage.NewStorageServiceServer())
 
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {

@@ -19,11 +19,9 @@ import (
 )
 
 type BlobcastChain struct {
-	chainID       string
-	celestiaDA    celestia.BlobStore
-	chainState    *state.ChainState
-	chunkState    *state.ChunkState
-	manifestState *state.ManifestState
+	chainID    string
+	celestiaDA celestia.BlobStore
+	chainState *state.ChainState
 }
 
 func NewBlobcastChain(ctx context.Context, celestiaDA celestia.BlobStore) (*BlobcastChain, error) {
@@ -37,21 +35,10 @@ func NewBlobcastChain(ctx context.Context, celestiaDA celestia.BlobStore) (*Blob
 		return nil, fmt.Errorf("error getting chain id: %v", err)
 	}
 
-	chunkState, err := state.GetChunkState()
-	if err != nil {
-		return nil, fmt.Errorf("error getting chunk state: %v", err)
-	}
-
-	manifestState, err := state.GetManifestState()
-	if err != nil {
-		return nil, fmt.Errorf("error getting manifest state: %v", err)
-	}
 	return &BlobcastChain{
-		chainID:       chainID,
-		celestiaDA:    celestiaDA,
-		chainState:    chainState,
-		chunkState:    chunkState,
-		manifestState: manifestState,
+		chainID:    chainID,
+		celestiaDA: celestiaDA,
+		chainState: chainState,
 	}, nil
 }
 
@@ -142,21 +129,28 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 			return nil
 		case head := <-heads:
 			slog.Info("new celestia block", "height", head.Height)
-			blockHeight := head.Height - celestiaHeightOffset
-			block, err := bc.ProduceBlock(ctx, blockHeight, head.Height)
-			if err != nil {
-				return fmt.Errorf("error producing block: %v", err)
-			}
+			latestCelestiaHeight = head.Height
+			for {
+				if nextHeight+celestiaHeightOffset > latestCelestiaHeight {
+					break
+				}
 
-			if err := bc.ApplyBlock(ctx, block, prevBlock); err != nil {
-				return fmt.Errorf("error applying block: %v", err)
-			}
+				block, err := bc.ProduceBlock(ctx, nextHeight, nextHeight+celestiaHeightOffset)
+				if err != nil {
+					return fmt.Errorf("error producing block: %v", err)
+				}
 
-			if err := bc.FinalizeBlock(ctx, blockHeight); err != nil {
-				return fmt.Errorf("error finalizing block: %v", err)
-			}
+				if err := bc.ApplyBlock(ctx, block, prevBlock); err != nil {
+					return fmt.Errorf("error applying block: %v", err)
+				}
 
-			prevBlock = block
+				if err := bc.FinalizeBlock(ctx, nextHeight); err != nil {
+					return fmt.Errorf("error finalizing block: %v", err)
+				}
+
+				prevBlock = block
+				nextHeight++
+			}
 		}
 	}
 }
@@ -339,7 +333,7 @@ func (bc *BlobcastChain) SyncChunk(ctx context.Context, height uint64, blob *blo
 		"commitment", hex.EncodeToString(blob.Commitment),
 		"size", len(chunkData.ChunkData),
 	)
-	return bc.chunkState.Set(state.ChunkKey(blob.Commitment), chunkData.ChunkData)
+	return bc.chainState.SetChunk(state.HashKey(blob.Commitment), chunkData.ChunkData)
 }
 
 func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, blob *blob.Blob, fileManifest *pbStorageV1.FileManifest) error {
@@ -363,7 +357,7 @@ func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, bl
 
 	// all chunks for this file manifest must be seen
 	for _, chunk := range fileManifest.Chunks {
-		chunkData, exists, err := bc.chunkState.Get(state.ChunkKey(chunk.Id.Commitment))
+		chunkData, exists, err := bc.chainState.GetChunk(state.HashKey(chunk.Id.Commitment))
 		if err != nil {
 			return fmt.Errorf("error getting chunk data: %v", err)
 		}
@@ -402,7 +396,7 @@ func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, bl
 		return nil
 	}
 
-	return bc.manifestState.PutFileManifest(manifestId, fileManifest)
+	return bc.chainState.PutFileManifest(manifestId, fileManifest)
 }
 
 func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint64, blob *blob.Blob, directoryManifest *pbStorageV1.DirectoryManifest) error {
@@ -427,7 +421,7 @@ func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint6
 	// all files for this directory manifest must be seen
 	for _, file := range directoryManifest.Files {
 		fileId := types.BlobIdentifierFromProto(file.Id)
-		fileManifest, found, err := bc.manifestState.GetFileManifest(fileId)
+		fileManifest, found, err := bc.chainState.GetFileManifest(fileId)
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
 		}
@@ -455,5 +449,5 @@ func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint6
 		return nil
 	}
 
-	return bc.manifestState.PutDirectoryManifest(manifestId, directoryManifest)
+	return bc.chainState.PutDirectoryManifest(manifestId, directoryManifest)
 }

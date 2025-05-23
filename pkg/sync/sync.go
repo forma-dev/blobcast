@@ -1,13 +1,11 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/crypto"
@@ -20,155 +18,6 @@ import (
 	pbRollupV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1"
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 )
-
-// GetChunkData downloads a single chunk of data from Celestia
-func GetChunkData(ctx context.Context, celestiaDA celestia.BlobStore, chunkRef *pbStorageV1.ChunkReference) ([]byte, error) {
-	slog.Debug("Getting chunk data",
-		"block_height", chunkRef.Id.Height,
-		"namespace", hex.EncodeToString(chunkRef.Id.Commitment),
-		"commitment_hash", hex.EncodeToString(chunkRef.ChunkHash),
-		"chunk_hash", hex.EncodeToString(chunkRef.ChunkHash),
-	)
-
-	chunkState, err := state.GetChunkState()
-	if err != nil {
-		return nil, fmt.Errorf("error getting chunk state db: %v", err)
-	}
-
-	cachedData, exists, err := chunkState.Get(state.ChunkKey(chunkRef.Id.Commitment))
-	if err != nil {
-		return nil, fmt.Errorf("error getting chunk data from state: %v", err)
-	}
-
-	if exists {
-		return cachedData, nil
-	}
-
-	existsInCelestia, err := celestiaDA.Has(ctx, chunkRef.Id.Height, chunkRef.Id.Commitment)
-	if err != nil {
-		return nil, fmt.Errorf("error checking if chunk exists in Celestia: %v", err)
-	}
-
-	if !existsInCelestia {
-		return nil, fmt.Errorf("chunk does not exist in Celestia")
-	}
-
-	chunkData, err := celestiaDA.Read(ctx, chunkRef.Id.Height, chunkRef.Id.Commitment)
-	if err != nil {
-		return nil, fmt.Errorf("error reading chunk from Celestia: %v", err)
-	}
-
-	slog.Debug("Verifying chunk hash")
-	chunkHash := sha256.Sum256(chunkData)
-	if !bytes.Equal(chunkHash[:], chunkRef.ChunkHash) {
-		return nil, fmt.Errorf("chunk hash verification failed")
-	}
-
-	chunkState.Set(state.ChunkKey(chunkRef.Id.Commitment), chunkData)
-
-	return chunkData, nil
-}
-
-// Download a file using its manifest
-func GetFileData(
-	ctx context.Context,
-	celestiaDA celestia.BlobStore,
-	id *types.BlobIdentifier,
-	maxConcurrency int,
-) ([]byte, error) {
-	fileManifest, err := GetFileManifest(ctx, celestiaDA, id)
-	if err != nil {
-		return nil, fmt.Errorf("error getting file manifest: %v", err)
-	}
-
-	slog.Info("Getting file data",
-		"file_name", fileManifest.FileName,
-		"file_size", fileManifest.FileSize,
-		"num_chunks", len(fileManifest.Chunks),
-		"blobcast_url", id.URL(),
-	)
-
-	// If maxConcurrency is 0 or negative, use a reasonable default
-	if maxConcurrency <= 0 {
-		maxConcurrency = DefaultMaxConcurrency
-	}
-
-	// Download all chunks concurrently and reconstruct the file
-	chunks := make([][]byte, len(fileManifest.Chunks))
-	errChan := make(chan error, len(fileManifest.Chunks))
-
-	// Create a semaphore channel to limit concurrency
-	sem := make(chan struct{}, maxConcurrency)
-	var wg sync.WaitGroup
-
-	// mutex for slice updates
-	var mu sync.Mutex
-
-	for i, chunk := range fileManifest.Chunks {
-		wg.Add(1)
-
-		go func(index int, chunkRef *pbStorageV1.ChunkReference) {
-			defer wg.Done()
-
-			// Acquire semaphore
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			slog.Debug("Getting chunk data", "chunk_index", index+1, "num_chunks", len(fileManifest.Chunks))
-
-			data, err := GetChunkData(ctx, celestiaDA, chunkRef)
-			if err != nil {
-				errChan <- fmt.Errorf("error downloading chunk %d: %v", index+1, err)
-				return
-			}
-
-			slog.Debug("Chunk data retrieved", "chunk_index", index+1, "num_chunks", len(fileManifest.Chunks), "chunk_size", len(data))
-
-			mu.Lock()
-			chunks[index] = data
-			mu.Unlock()
-		}(i, chunk)
-	}
-
-	// Wait for all downloads to complete
-	wg.Wait()
-	close(errChan)
-
-	// Check for errors
-	for err := range errChan {
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Combine chunks in the correct order
-	fileData := make([]byte, 0, fileManifest.FileSize)
-	for _, chunkData := range chunks {
-		fileData = append(fileData, chunkData...)
-	}
-
-	// Verify file length is correct in manifest
-	if uint64(len(fileData)) != fileManifest.FileSize {
-		return nil, fmt.Errorf("file length verification failed")
-	}
-
-	// Verify the file hash
-	fileHash := sha256.Sum256(fileData)
-	slog.Debug("Verifying file hash", "expected_file_hash", hex.EncodeToString(fileManifest.FileHash), "computed_file_hash", hex.EncodeToString(fileHash[:]))
-
-	if !bytes.Equal(fileHash[:], fileManifest.FileHash) {
-		return nil, fmt.Errorf("file hash verification failed")
-	}
-
-	slog.Info("Successfully obtained file data",
-		"file_name", fileManifest.FileName,
-		"file_size", fileManifest.FileSize,
-		"num_chunks", len(fileManifest.Chunks),
-		"blobcast_url", id.URL(),
-	)
-
-	return fileData, nil
-}
 
 func PutFileData(
 	ctx context.Context,

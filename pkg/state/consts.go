@@ -1,10 +1,8 @@
 package state
 
 const (
-	ChainStateDb    = "chain.db"
-	ChunkStateDb    = "chunk.db"
-	ManifestStateDb = "manifest.db"
-	UploadStateDb   = "upload.db"
+	ChainStateDb  = "chain.db"
+	UploadStateDb = "upload.db"
 
 	ChainIDMocha    = "blobcast-mocha-1"
 	ChainIDMammoth  = "blobcast-mamo-1"

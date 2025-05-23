@@ -3,6 +3,7 @@ package state
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/cockroachdb/pebble"
@@ -11,12 +12,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	pbRollupV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1"
+	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 )
 
 const (
-	keyChainID              = "chain:id"
-	keyFinalizedHeight      = "chain:height:finalized"
-	keyCelestiaHeightOffset = "celestia:height_offset"
+	keyChainID              = "meta:chainid"
+	keyFinalizedHeight      = "meta:finalized"
+	keyCelestiaHeightOffset = "meta:celestia_offset"
 )
 
 var (
@@ -24,10 +26,15 @@ var (
 	chainStateMutex sync.Mutex
 )
 
+type HashKey [32]byte
+
 type ChainState struct {
-	db             *pebble.DB
-	blockPrefix    []byte
-	stateMMRPrefix []byte
+	db                 *pebble.DB
+	blockPrefix        []byte
+	stateMMRPrefix     []byte
+	chunkPrefix        []byte
+	fileManifestPrefix []byte
+	dirManifestPrefix  []byte
 }
 
 func GetChainState() (*ChainState, error) {
@@ -59,9 +66,12 @@ func openChainState() (*ChainState, error) {
 	}
 
 	return &ChainState{
-		db:             db,
-		blockPrefix:    []byte("block:"),
-		stateMMRPrefix: []byte("state_mmr:"),
+		db:                 db,
+		blockPrefix:        []byte("blk:"),
+		stateMMRPrefix:     []byte("mmr:"),
+		chunkPrefix:        []byte("chk:"),
+		fileManifestPrefix: []byte("man:f:"),
+		dirManifestPrefix:  []byte("man:d:"),
 	}, nil
 }
 
@@ -120,8 +130,10 @@ func (s *ChainState) SetFinalizedHeight(height uint64) error {
 	return s.db.Set([]byte(keyFinalizedHeight), buf, nil)
 }
 
+// --- Block ---
+
 func (s *ChainState) PutBlock(height uint64, block *types.Block) error {
-	key := s.blockKey(height)
+	key := prefixHeightKey(height, s.blockPrefix)
 	blockBytes, err := proto.Marshal(block.Proto())
 	if err != nil {
 		return err
@@ -130,7 +142,7 @@ func (s *ChainState) PutBlock(height uint64, block *types.Block) error {
 }
 
 func (s *ChainState) GetBlock(height uint64) (*types.Block, error) {
-	key := s.blockKey(height)
+	key := prefixHeightKey(height, s.blockPrefix)
 	blockBytes, closer, err := s.db.Get(key)
 	if err != nil {
 		return nil, err
@@ -145,19 +157,14 @@ func (s *ChainState) GetBlock(height uint64) (*types.Block, error) {
 	return types.BlockFromProto(pbBlock), nil
 }
 
-func (s *ChainState) blockKey(height uint64) []byte {
-	k := make([]byte, len(s.blockPrefix)+8)
-	copy(k, s.blockPrefix)
-	binary.BigEndian.PutUint64(k[len(s.blockPrefix):], height)
-	return k
-}
+// --- State MMR ---
 
 func (s *ChainState) PutStateMMR(height uint64, mmr *mmr.MMR) error {
 	if height == 0 {
 		return nil
 	}
 
-	key := s.stateMMRKey(height)
+	key := prefixHeightKey(height, s.stateMMRPrefix)
 	return s.db.Set(key, mmr.Snapshot(), nil)
 }
 
@@ -166,7 +173,7 @@ func (s *ChainState) GetStateMMR(height uint64) (*mmr.MMR, error) {
 		return mmr.NewMMR(), nil
 	}
 
-	key := s.stateMMRKey(height)
+	key := prefixHeightKey(height, s.stateMMRPrefix)
 	mmrBytes, closer, err := s.db.Get(key)
 	if err != nil {
 		return nil, err
@@ -180,9 +187,93 @@ func (s *ChainState) GetStateMMR(height uint64) (*mmr.MMR, error) {
 	return mmr, nil
 }
 
-func (s *ChainState) stateMMRKey(height uint64) []byte {
-	k := make([]byte, len(s.stateMMRPrefix)+8)
-	copy(k, s.stateMMRPrefix)
-	binary.BigEndian.PutUint64(k[len(s.stateMMRPrefix):], height)
-	return k
+// --- Chunk ---
+
+func (s *ChainState) GetChunk(key HashKey) ([]byte, bool, error) {
+	value, closer, err := s.db.Get(prefixKey(key[:], s.chunkPrefix))
+	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	defer closer.Close()
+
+	// safe copy
+	safeValue := make([]byte, len(value))
+	copy(safeValue, value)
+
+	return safeValue, true, nil
+}
+
+func (s *ChainState) SetChunk(key HashKey, value []byte) error {
+	return s.db.Set(prefixKey(key[:], s.chunkPrefix), value, nil)
+}
+
+func (s *ChainState) GetDirectoryManifest(id *types.BlobIdentifier) (*pbStorageV1.DirectoryManifest, bool, error) {
+	key := prefixKey(id.Bytes(), s.dirManifestPrefix)
+
+	data, closer, err := s.db.Get(key)
+	if err != nil {
+		if err == pebble.ErrNotFound {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	defer closer.Close()
+
+	// Copy the data since the slice becomes invalid after closer.Close()
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	manifest := &pbStorageV1.DirectoryManifest{}
+	if err := proto.Unmarshal(dataCopy, manifest); err != nil {
+		return nil, false, fmt.Errorf("unmarshal cached directory manifest: %w", err)
+	}
+
+	return manifest, true, nil
+}
+
+func (s *ChainState) PutDirectoryManifest(id *types.BlobIdentifier, manifest *pbStorageV1.DirectoryManifest) error {
+	data, err := proto.Marshal(manifest)
+	if err != nil {
+		return fmt.Errorf("marshal directory manifest: %w", err)
+	}
+
+	key := prefixKey(id.Bytes(), s.dirManifestPrefix)
+	return s.db.Set(key, data, pebble.Sync)
+}
+
+func (s *ChainState) GetFileManifest(id *types.BlobIdentifier) (*pbStorageV1.FileManifest, bool, error) {
+	key := prefixKey(id.Bytes(), s.fileManifestPrefix)
+
+	data, closer, err := s.db.Get(key)
+	if err != nil {
+		if err == pebble.ErrNotFound {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	defer closer.Close()
+
+	// Copy the data since the slice becomes invalid after closer.Close()
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	manifest := &pbStorageV1.FileManifest{}
+	if err := proto.Unmarshal(dataCopy, manifest); err != nil {
+		return nil, false, fmt.Errorf("unmarshal cached file manifest: %w", err)
+	}
+
+	return manifest, true, nil
+}
+
+func (s *ChainState) PutFileManifest(id *types.BlobIdentifier, manifest *pbStorageV1.FileManifest) error {
+	data, err := proto.Marshal(manifest)
+	if err != nil {
+		return fmt.Errorf("marshal file manifest: %w", err)
+	}
+
+	key := prefixKey(id.Bytes(), s.fileManifestPrefix)
+	return s.db.Set(key, data, pebble.Sync)
 }

@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/forma-dev/blobcast/pkg/api"
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
@@ -23,21 +24,15 @@ import (
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 )
 
-func DownloadFile(
-	ctx context.Context,
-	celestiaDA celestia.BlobStore,
-	id *types.BlobIdentifier,
-	target string,
-	encryptionKey []byte,
-) error {
+func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, encryptionKey []byte) error {
 	targetDir := filepath.Dir(target)
 	fileName := filepath.Base(target)
 
-	slog.Debug("Downloading file", "target_dir", targetDir, "file_name", fileName)
+	slog.Debug("Exporting file to disk", "target_dir", targetDir, "file_name", fileName, "blobcast_id", id)
 
 	// check if file already exists
 	if storage.Exists(target) {
-		fileManifest, err := GetFileManifest(ctx, celestiaDA, id)
+		fileManifest, err := api.GetFileManifest(ctx, id)
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
 		}
@@ -59,7 +54,7 @@ func DownloadFile(
 	}
 
 	// get file data
-	fileData, err := GetFileData(ctx, celestiaDA, id, 0)
+	fileData, err := api.GetFileData(ctx, id)
 	if err != nil {
 		return fmt.Errorf("error getting file data: %v", err)
 	}
@@ -93,30 +88,25 @@ func DownloadFile(
 		return fmt.Errorf("error writing file to disk: %v", err)
 	}
 
-	slog.Info("Successfully downloaded file",
+	slog.Info("Successfully exported file",
 		"target_dir", targetDir,
 		"file_name", fileName,
 		"file_size", len(dataToWrite),
+		"blobcast_id", id,
 	)
 
 	return nil
 }
 
-func DownloadDirectory(
-	ctx context.Context,
-	celestiaDA celestia.BlobStore,
-	id *types.BlobIdentifier,
-	target string,
-	encryptionKey []byte,
-) error {
-	slog.Info("Downloading directory", "target_dir", target)
+func ExportDirectory(ctx context.Context, id *types.BlobIdentifier, target string, encryptionKey []byte) error {
+	slog.Info("Exporting directory to disk", "target_dir", target, "blobcast_id", id)
 
 	// Create target directory if it doesn't exist
 	if err := storage.EnsureDir(target); err != nil {
 		return fmt.Errorf("error creating target directory: %v", err)
 	}
 
-	directoryManifest, err := GetDirectoryManifest(ctx, celestiaDA, id)
+	directoryManifest, err := api.GetDirectoryManifest(ctx, id)
 	if err != nil {
 		return fmt.Errorf("error getting directory manifest: %v", err)
 	}
@@ -132,13 +122,13 @@ func DownloadDirectory(
 		}
 
 		// Download the file
-		err = DownloadFile(ctx, celestiaDA, fileManifestIdentifier, targetPath, encryptionKey)
+		err = ExportFile(ctx, fileManifestIdentifier, targetPath, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error downloading file %s: %v", relPath, err)
 		}
 	}
 
-	slog.Info("Successfully downloaded directory", "target_dir", target)
+	slog.Info("Successfully exported directory", "target_dir", target, "blobcast_id", id)
 	return nil
 }
 
