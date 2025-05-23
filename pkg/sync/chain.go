@@ -69,10 +69,23 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 
 	// genesis block
 	if nextHeight == 0 {
-		genesisBlock, err := bc.CreateGenesisBlock(ctx, celestiaHeightOffset)
+		tx, err := bc.chainState.BeginTransaction()
 		if err != nil {
+			return fmt.Errorf("error beginning chain state transaction: %v", err)
+		}
+
+		genesisBlock, err := bc.CreateGenesisBlock(ctx, tx, celestiaHeightOffset)
+		if err != nil {
+			if abortErr := tx.Abort(); abortErr != nil {
+				slog.Error("error aborting transaction", "error", abortErr)
+			}
 			return fmt.Errorf("error creating genesis block: %v", err)
 		}
+
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("error committing transaction: %v", err)
+		}
+
 		prevBlock = genesisBlock
 		nextHeight++
 	}
@@ -99,17 +112,35 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 			}
 		}
 
-		block, err := bc.ProduceBlock(ctx, nextHeight, nextHeight+celestiaHeightOffset)
+		tx, err := bc.chainState.BeginTransaction()
 		if err != nil {
+			return fmt.Errorf("error beginning chain state transaction: %v", err)
+		}
+
+		block, err := bc.ProduceBlock(ctx, tx, nextHeight, nextHeight+celestiaHeightOffset)
+		if err != nil {
+			if abortErr := tx.Abort(); abortErr != nil {
+				slog.Error("error aborting transaction", "error", abortErr)
+			}
 			return fmt.Errorf("error producing block: %v", err)
 		}
 
-		if err := bc.ApplyBlock(ctx, block, prevBlock); err != nil {
+		if err := bc.ApplyBlock(ctx, tx, block, prevBlock); err != nil {
+			if abortErr := tx.Abort(); abortErr != nil {
+				slog.Error("error aborting transaction", "error", abortErr)
+			}
 			return fmt.Errorf("error applying block: %v", err)
 		}
 
-		if err := bc.FinalizeBlock(ctx, nextHeight); err != nil {
+		if err := bc.FinalizeBlock(ctx, tx, nextHeight); err != nil {
+			if abortErr := tx.Abort(); abortErr != nil {
+				slog.Error("error aborting transaction", "error", abortErr)
+			}
 			return fmt.Errorf("error finalizing block: %v", err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("error committing transaction: %v", err)
 		}
 
 		prevBlock = block
@@ -135,17 +166,35 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 					break
 				}
 
-				block, err := bc.ProduceBlock(ctx, nextHeight, nextHeight+celestiaHeightOffset)
+				tx, err := bc.chainState.BeginTransaction()
 				if err != nil {
+					return fmt.Errorf("error beginning chain state transaction: %v", err)
+				}
+
+				block, err := bc.ProduceBlock(ctx, tx, nextHeight, nextHeight+celestiaHeightOffset)
+				if err != nil {
+					if abortErr := tx.Abort(); abortErr != nil {
+						slog.Error("error aborting transaction", "error", abortErr)
+					}
 					return fmt.Errorf("error producing block: %v", err)
 				}
 
-				if err := bc.ApplyBlock(ctx, block, prevBlock); err != nil {
+				if err := bc.ApplyBlock(ctx, tx, block, prevBlock); err != nil {
+					if abortErr := tx.Abort(); abortErr != nil {
+						slog.Error("error aborting transaction", "error", abortErr)
+					}
 					return fmt.Errorf("error applying block: %v", err)
 				}
 
-				if err := bc.FinalizeBlock(ctx, nextHeight); err != nil {
+				if err := bc.FinalizeBlock(ctx, tx, nextHeight); err != nil {
+					if abortErr := tx.Abort(); abortErr != nil {
+						slog.Error("error aborting transaction", "error", abortErr)
+					}
 					return fmt.Errorf("error finalizing block: %v", err)
+				}
+
+				if err := tx.Commit(); err != nil {
+					return fmt.Errorf("error committing transaction: %v", err)
 				}
 
 				prevBlock = block
@@ -155,7 +204,7 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 	}
 }
 
-func (bc *BlobcastChain) CreateGenesisBlock(ctx context.Context, celestiaHeight uint64) (*types.Block, error) {
+func (bc *BlobcastChain) CreateGenesisBlock(ctx context.Context, tx *state.ChainStateTransaction, celestiaHeight uint64) (*types.Block, error) {
 	slog.Debug("creating genesis block", "celestia_height", celestiaHeight)
 
 	celestiaHeader, err := bc.celestiaDA.GetHeader(ctx, celestiaHeight)
@@ -171,15 +220,15 @@ func (bc *BlobcastChain) CreateGenesisBlock(ctx context.Context, celestiaHeight 
 
 	slog.Info("created genesis block", "height", block.Height(), "hash", block.Hash())
 
-	if err := bc.chainState.PutBlock(block.Height(), block); err != nil {
+	if err := tx.PutBlock(block.Height(), block); err != nil {
 		return nil, fmt.Errorf("error applying genesis block: %v", err)
 	}
 
 	return block, nil
 }
 
-func (bc *BlobcastChain) ProduceBlock(ctx context.Context, height uint64, celestiaHeight uint64) (*types.Block, error) {
-	block, err := bc.ProduceBlockFromCelestiaHeight(ctx, celestiaHeight)
+func (bc *BlobcastChain) ProduceBlock(ctx context.Context, tx *state.ChainStateTransaction, height uint64, celestiaHeight uint64) (*types.Block, error) {
+	block, err := bc.ProduceBlockFromCelestiaHeight(ctx, tx, celestiaHeight)
 	if err != nil {
 		return nil, fmt.Errorf("error producing block from celestia height: %v", err)
 	}
@@ -197,7 +246,7 @@ func (bc *BlobcastChain) ProduceBlock(ctx context.Context, height uint64, celest
 	return block, nil
 }
 
-func (bc *BlobcastChain) ApplyBlock(ctx context.Context, block *types.Block, prevBlock *types.Block) error {
+func (bc *BlobcastChain) ApplyBlock(ctx context.Context, tx *state.ChainStateTransaction, block *types.Block, prevBlock *types.Block) error {
 	slog.Debug("applying block", "height", block.Height())
 
 	if block.Height() > 0 {
@@ -239,7 +288,7 @@ func (bc *BlobcastChain) ApplyBlock(ctx context.Context, block *types.Block, pre
 
 	block.Header.StateRoot = stateMMR.Root()
 
-	if err := bc.chainState.PutStateMMR(block.Height(), stateMMR); err != nil {
+	if err := tx.PutStateMMR(block.Height(), stateMMR); err != nil {
 		return fmt.Errorf("error putting state mmr: %v", err)
 	}
 
@@ -257,16 +306,16 @@ func (bc *BlobcastChain) ApplyBlock(ctx context.Context, block *types.Block, pre
 	)
 	slog.Info("applied block", "height", block.Height(), "hash", block.Hash(), "parent_hash", block.Header.ParentHash)
 
-	return bc.chainState.PutBlock(block.Height(), block)
+	return tx.PutBlock(block.Height(), block)
 }
 
-func (bc *BlobcastChain) FinalizeBlock(ctx context.Context, height uint64) error {
+func (bc *BlobcastChain) FinalizeBlock(ctx context.Context, tx *state.ChainStateTransaction, height uint64) error {
 	slog.Debug("finalizing block", "height", height)
-	return bc.chainState.SetFinalizedHeight(height)
+	return tx.SetFinalizedHeight(height)
 }
 
-func (bc *BlobcastChain) ProduceBlockFromCelestiaHeight(ctx context.Context, height uint64) (*types.Block, error) {
-	chunks, files, dirs, err := bc.SyncCelestiaHeight(ctx, height)
+func (bc *BlobcastChain) ProduceBlockFromCelestiaHeight(ctx context.Context, tx *state.ChainStateTransaction, height uint64) (*types.Block, error) {
+	chunks, files, dirs, err := bc.SyncCelestiaHeight(ctx, tx, height)
 	if err != nil {
 		return nil, fmt.Errorf("error syncing celestia height: %v", err)
 	}
@@ -276,17 +325,19 @@ func (bc *BlobcastChain) ProduceBlockFromCelestiaHeight(ctx context.Context, hei
 
 func (bc *BlobcastChain) SyncCelestiaHeight(
 	ctx context.Context,
+	tx *state.ChainStateTransaction,
 	height uint64,
 ) (chunks []*types.BlobIdentifier, files []*types.BlobIdentifier, dirs []*types.BlobIdentifier, err error) {
 	blobs, err := bc.celestiaDA.GetBlobs(ctx, height)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error getting blobs from Celestia: %v", err)
 	}
-	return bc.SyncBlobs(ctx, height, blobs)
+	return bc.SyncBlobs(ctx, tx, height, blobs)
 }
 
 func (bc *BlobcastChain) SyncBlobs(
 	ctx context.Context,
+	tx *state.ChainStateTransaction,
 	height uint64,
 	blobs []*blob.Blob,
 ) (chunks []*types.BlobIdentifier, files []*types.BlobIdentifier, dirs []*types.BlobIdentifier, err error) {
@@ -305,15 +356,15 @@ func (bc *BlobcastChain) SyncBlobs(
 		var syncErr error
 		switch record := envelope.Payload.(type) {
 		case *pbRollupV1.BlobcastEnvelope_ChunkData:
-			if syncErr = bc.SyncChunk(ctx, height, blob, record.ChunkData); syncErr == nil {
+			if syncErr = bc.SyncChunk(ctx, tx, height, blob, record.ChunkData); syncErr == nil {
 				chunks = append(chunks, blobId)
 			}
 		case *pbRollupV1.BlobcastEnvelope_FileManifest:
-			if syncErr = bc.SyncFileManifest(ctx, height, blob, record.FileManifest); syncErr == nil {
+			if syncErr = bc.SyncFileManifest(ctx, tx, height, blob, record.FileManifest); syncErr == nil {
 				files = append(files, blobId)
 			}
 		case *pbRollupV1.BlobcastEnvelope_DirectoryManifest:
-			if syncErr = bc.SyncDirectoryManifest(ctx, height, blob, record.DirectoryManifest); syncErr == nil {
+			if syncErr = bc.SyncDirectoryManifest(ctx, tx, height, blob, record.DirectoryManifest); syncErr == nil {
 				dirs = append(dirs, blobId)
 			}
 		default:
@@ -327,16 +378,28 @@ func (bc *BlobcastChain) SyncBlobs(
 	return chunks, files, dirs, nil
 }
 
-func (bc *BlobcastChain) SyncChunk(ctx context.Context, height uint64, blob *blob.Blob, chunkData *pbStorageV1.ChunkData) error {
+func (bc *BlobcastChain) SyncChunk(
+	ctx context.Context,
+	tx *state.ChainStateTransaction,
+	height uint64,
+	blob *blob.Blob,
+	chunkData *pbStorageV1.ChunkData,
+) error {
 	slog.Debug("syncing chunk",
 		"height", height,
 		"commitment", hex.EncodeToString(blob.Commitment),
 		"size", len(chunkData.ChunkData),
 	)
-	return bc.chainState.SetChunk(state.HashKey(blob.Commitment), chunkData.ChunkData)
+	return tx.PutChunk(state.HashKey(blob.Commitment), chunkData.ChunkData)
 }
 
-func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, blob *blob.Blob, fileManifest *pbStorageV1.FileManifest) error {
+func (bc *BlobcastChain) SyncFileManifest(
+	ctx context.Context,
+	tx *state.ChainStateTransaction,
+	height uint64,
+	blob *blob.Blob,
+	fileManifest *pbStorageV1.FileManifest,
+) error {
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
 		Commitment: blob.Commitment,
@@ -357,7 +420,7 @@ func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, bl
 
 	// all chunks for this file manifest must be seen
 	for _, chunk := range fileManifest.Chunks {
-		chunkData, exists, err := bc.chainState.GetChunk(state.HashKey(chunk.Id.Commitment))
+		chunkData, exists, err := tx.GetChunk(state.HashKey(chunk.Id.Commitment))
 		if err != nil {
 			return fmt.Errorf("error getting chunk data: %v", err)
 		}
@@ -396,10 +459,16 @@ func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, bl
 		return nil
 	}
 
-	return bc.chainState.PutFileManifest(manifestId, fileManifest)
+	return tx.PutFileManifest(manifestId, fileManifest)
 }
 
-func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint64, blob *blob.Blob, directoryManifest *pbStorageV1.DirectoryManifest) error {
+func (bc *BlobcastChain) SyncDirectoryManifest(
+	ctx context.Context,
+	tx *state.ChainStateTransaction,
+	height uint64,
+	blob *blob.Blob,
+	directoryManifest *pbStorageV1.DirectoryManifest,
+) error {
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
 		Commitment: blob.Commitment,
@@ -421,7 +490,7 @@ func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint6
 	// all files for this directory manifest must be seen
 	for _, file := range directoryManifest.Files {
 		fileId := types.BlobIdentifierFromProto(file.Id)
-		fileManifest, found, err := bc.chainState.GetFileManifest(fileId)
+		fileManifest, found, err := tx.GetFileManifest(fileId)
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
 		}
@@ -449,5 +518,5 @@ func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint6
 		return nil
 	}
 
-	return bc.chainState.PutDirectoryManifest(manifestId, directoryManifest)
+	return tx.PutDirectoryManifest(manifestId, directoryManifest)
 }
