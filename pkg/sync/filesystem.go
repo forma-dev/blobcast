@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
+	"github.com/forma-dev/blobcast/pkg/crypto"
+	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
 	"github.com/forma-dev/blobcast/pkg/encryption"
 	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/forma-dev/blobcast/pkg/storage"
@@ -19,7 +21,6 @@ import (
 
 	pbPrimitivesV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
-	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
 func DownloadFile(
@@ -143,19 +144,18 @@ func DownloadDirectory(
 
 func UploadFile(
 	ctx context.Context,
-	storageClient pbStorageapisV1.StorageServiceClient,
 	da celestia.BlobStore,
 	source string,
 	relativePath string,
 	maxBlobSize int,
 	encryptionKey []byte,
-) (*types.BlobIdentifier, *pbStorageV1.FileManifest, error) {
+) (*types.BlobIdentifier, crypto.Hash, error) {
 	slog.Info("Uploading file", "file_name", source, "relative_path", relativePath, "max_blob_size", maxBlobSize)
 
 	// Read the file data
 	data, err := storage.ReadFile(source)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error reading file %s: %v", source, err)
+		return nil, crypto.Hash{}, fmt.Errorf("error reading file %s: %v", source, err)
 	}
 
 	slog.Debug("Successfully read file", "file_name", source, "file_size", len(data))
@@ -166,41 +166,40 @@ func UploadFile(
 		slog.Debug("Encrypting file", "file_name", relativePath, "file_size", len(data))
 		encryptedData, err := encryption.Encrypt(data, encryptionKey)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error encrypting file %s: %v", relativePath, err)
+			return nil, crypto.Hash{}, fmt.Errorf("error encrypting file %s: %v", relativePath, err)
 		}
 		dataToProcess = encryptedData
 		slog.Debug("Encrypted file", "file_name", relativePath, "file_size", len(data), "encrypted_size", len(dataToProcess))
 	}
 
-	blobIdentifier, fileManifest, err := PutFileData(ctx, storageClient, da, relativePath, dataToProcess, maxBlobSize)
+	blobIdentifier, fileHash, err := PutFileData(ctx, da, relativePath, dataToProcess, maxBlobSize)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error putting file data: %v", err)
+		return nil, fileHash, fmt.Errorf("error putting file data: %v", err)
 	}
 
-	return blobIdentifier, fileManifest, nil
+	return blobIdentifier, fileHash, nil
 }
 
 func UploadDirectory(
 	ctx context.Context,
-	storageClient pbStorageapisV1.StorageServiceClient,
 	da celestia.BlobStore,
 	source string,
 	maxBlobSize int,
 	encryptionKey []byte,
-) (*types.BlobIdentifier, *pbStorageV1.DirectoryManifest, error) {
+) (*types.BlobIdentifier, crypto.Hash, error) {
 	slog.Info("Uploading directory", "directory", source)
 
 	// get upload state
 	uploadState, err := state.GetUploadState()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting upload state: %v", err)
+		return nil, crypto.Hash{}, fmt.Errorf("error getting upload state: %v", err)
 	}
 
 	// get directory state
 	dirKey := sha256.Sum256([]byte(source))
 	dirState, err := uploadState.GetUploadRecord(dirKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting directory state: %v", err)
+		return nil, crypto.Hash{}, fmt.Errorf("error getting directory state: %v", err)
 	}
 
 	// directory upload already complete
@@ -209,16 +208,10 @@ func UploadDirectory(
 
 		manifestIdentifier, err := types.BlobIdentifierFromString(dirState.ManifestID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing manifest identifier: %v", err)
+			return nil, crypto.Hash{}, fmt.Errorf("error parsing manifest identifier: %v", err)
 		}
 
-		// @TODO: recreate or fetch the directory manifest
-		dirManifest := &pbStorageV1.DirectoryManifest{
-			ManifestVersion: "1.0",
-			DirectoryName:   filepath.Base(source),
-		}
-
-		return manifestIdentifier, dirManifest, nil
+		return manifestIdentifier, crypto.Hash{}, nil
 	}
 
 	var filesToUpload []struct {
@@ -267,7 +260,7 @@ func UploadDirectory(
 	})
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("error walking directory: %v", err)
+		return nil, crypto.Hash{}, fmt.Errorf("error walking directory: %v", err)
 	}
 
 	// Create a directory manifest using the new Protocol Buffer format
@@ -277,16 +270,17 @@ func UploadDirectory(
 		Files:           make([]*pbStorageV1.FileReference, 0),
 	}
 
-	var fileHashes map[string][]byte = make(map[string][]byte)
+	var fileHashes map[string]crypto.Hash = make(map[string]crypto.Hash)
 
 	// Upload files
 	for _, file := range filesToUpload {
-		blobIdentifier, manifest, err := UploadFile(ctx, storageClient, da, file.path, file.relPath, maxBlobSize, encryptionKey)
+		blobIdentifier, fileHash, err := UploadFile(ctx, da, file.path, file.relPath, maxBlobSize, encryptionKey)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error uploading file %s: %v", file.path, err)
+			return nil, crypto.Hash{}, fmt.Errorf("error uploading file %s: %v", file.path, err)
 		}
 
-		fileHashes[file.relPath] = manifest.FileHash
+		// hash with relative path to ensure unique directories with same files have different hashes
+		fileHashes[file.relPath] = crypto.HashBytes([]byte(file.relPath), fileHash[:])
 
 		dirManifest.Files = append(dirManifest.Files, &pbStorageV1.FileReference{
 			Id: &pbPrimitivesV1.BlobIdentifier{
@@ -303,21 +297,22 @@ func UploadDirectory(
 		return dirManifest.Files[i].RelativePath < dirManifest.Files[j].RelativePath
 	})
 
-	// Create a hash of all file hashes
-	dirHasher := sha256.New()
+	// Create merkle root of all file hashes
+	merkleLeaves := make([][]byte, 0, len(fileHashes))
 	for _, fileRef := range dirManifest.Files {
-		if fileHash, ok := fileHashes[fileRef.RelativePath]; ok {
-			dirHasher.Write(fileHash)
-
-			// Also include the path to ensure unique directories with same files have different hashes
-			dirHasher.Write([]byte(fileRef.RelativePath))
+		fileHash, ok := fileHashes[fileRef.RelativePath]
+		if !ok {
+			return nil, crypto.Hash{}, fmt.Errorf("file hash not found for file %s", fileRef.RelativePath)
 		}
+		merkleLeaves = append(merkleLeaves, fileHash.Bytes())
 	}
-	dirManifest.DirectoryHash = dirHasher.Sum(nil)
+
+	dirMerkleRoot := merkle.CalculateMerkleRoot(merkleLeaves)
+	dirManifest.DirectoryHash = dirMerkleRoot.Bytes()
 
 	manifestIdentifier, err := PutDirectoryManifest(ctx, da, dirManifest)
 	if err != nil {
-		return nil, dirManifest, fmt.Errorf("error uploading directory manifest: %v", err)
+		return nil, dirMerkleRoot, fmt.Errorf("error uploading directory manifest: %v", err)
 	}
 
 	// save directory state
@@ -326,8 +321,8 @@ func UploadDirectory(
 
 	// Save the final state
 	if err := uploadState.SaveUploadRecord(dirState); err != nil {
-		return nil, dirManifest, fmt.Errorf("error saving directory state: %v", err)
+		return nil, dirMerkleRoot, fmt.Errorf("error saving directory state: %v", err)
 	}
 
-	return manifestIdentifier, dirManifest, nil
+	return manifestIdentifier, dirMerkleRoot, nil
 }

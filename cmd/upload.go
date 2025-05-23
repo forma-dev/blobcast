@@ -11,10 +11,6 @@ import (
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/sync"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
 // uploadCmd represents the upload command
@@ -36,7 +32,6 @@ func init() {
 	uploadCmd.Flags().StringVarP(&flagFile, "file", "f", "", "File to upload")
 	uploadCmd.Flags().StringVar(&flagMaxBlobSize, "max-blob-size", "384KB", "Max file chunk size (e.g., 1.5MB, 1024KB)")
 	uploadCmd.Flags().StringVar(&flagMaxTxSize, "max-tx-size", "2MB", "Max transaction size (e.g., 32MB, 2097152B)")
-	uploadCmd.Flags().StringVar(&flagGRPCAddr, "storage-grpc", getEnvWithDefault("BLOBCAST_STORAGE_GRPC", "127.0.0.1:50051"), "gRPC address for storage service")
 }
 
 func runUpload(cmd *cobra.Command, args []string) error {
@@ -73,10 +68,6 @@ func runUpload(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("please supply auth token via --auth flag or BLOBCAST_CELESTIA_NODE_AUTH_TOKEN environment variable")
 	}
 
-	if flagGRPCAddr == "" {
-		return fmt.Errorf("please supply gRPC address via --storage-grpc flag or BLOBCAST_STORAGE_GRPC environment variable")
-	}
-
 	// Parse blob and transaction size limits
 	maxBlobSize, err := parseSizeString(flagMaxBlobSize)
 	if err != nil {
@@ -107,17 +98,6 @@ func runUpload(cmd *cobra.Command, args []string) error {
 		encryptionKey = key
 	}
 
-	// Initialize storage client
-	conn, err := grpc.NewClient(
-		flagGRPCAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return fmt.Errorf("error creating storage client: %v", err)
-	}
-	defer conn.Close()
-	storageClient := pbStorageapisV1.NewStorageServiceClient(conn)
-
 	// Initialize Celestia DA client
 	daConfig := celestia.DAConfig{
 		Rpc:         flagRPC,
@@ -134,7 +114,7 @@ func runUpload(cmd *cobra.Command, args []string) error {
 	// do the upload
 	switch {
 	case flagDir != "":
-		manifestIdentifier, _, err := sync.UploadDirectory(context.Background(), storageClient, celestiaDA, flagDir, maxBlobSize, encryptionKey)
+		manifestIdentifier, _, err := sync.UploadDirectory(context.Background(), celestiaDA, flagDir, maxBlobSize, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error uploading directory: %v", err)
 		}
@@ -142,7 +122,6 @@ func runUpload(cmd *cobra.Command, args []string) error {
 	case flagFile != "":
 		manifestIdentifier, _, err := sync.UploadFile(
 			context.Background(),
-			storageClient,
 			celestiaDA,
 			flagFile,
 			filepath.Base(flagFile),

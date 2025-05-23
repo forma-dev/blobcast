@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/fileutil"
 	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/forma-dev/blobcast/pkg/types"
@@ -18,7 +19,6 @@ import (
 	pbPrimitivesV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
 	pbRollupV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1"
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
-	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
 // GetChunkData downloads a single chunk of data from Celestia
@@ -172,38 +172,30 @@ func GetFileData(
 
 func PutFileData(
 	ctx context.Context,
-	storageClient pbStorageapisV1.StorageServiceClient,
 	da celestia.BlobStore,
 	fileName string,
 	fileData []byte,
 	maxBlobSize int,
-) (*types.BlobIdentifier, *pbStorageV1.FileManifest, error) {
-	fileHash := sha256.Sum256(fileData)
+) (*types.BlobIdentifier, crypto.Hash, error) {
+	fileHash := crypto.HashBytes(fileData)
 
 	// get upload state
 	uploadState, err := state.GetUploadState()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting upload state: %v", err)
+		return nil, fileHash, fmt.Errorf("error getting upload state: %v", err)
 	}
 
 	// get file state
-	fileState, err := uploadState.GetUploadRecord(fileHash)
+	fileState, err := uploadState.GetUploadRecord(state.UploadRecordKey(fileHash))
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting file state: %v", err)
+		return nil, fileHash, fmt.Errorf("error getting file state: %v", err)
 	}
 
 	// file is already completed
 	if fileState.Completed {
 		manifestIdentifier, err := types.BlobIdentifierFromString(fileState.ManifestID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing manifest identifier: %v", err)
-		}
-
-		fileManifestResponse, err := storageClient.GetFileManifest(ctx, &pbStorageapisV1.GetFileManifestRequest{
-			Id: manifestIdentifier.Proto(),
-		})
-		if err != nil {
-			return nil, nil, fmt.Errorf("error getting file manifest: %v", err)
+			return nil, fileHash, fmt.Errorf("error parsing manifest identifier: %v", err)
 		}
 
 		slog.Info("File is already completed",
@@ -212,7 +204,7 @@ func PutFileData(
 			"blobcast_url", manifestIdentifier.URL(),
 		)
 
-		return manifestIdentifier, fileManifestResponse.Manifest, nil
+		return manifestIdentifier, fileHash, nil
 	}
 
 	// Get mime type of the original file data
@@ -253,7 +245,7 @@ func PutFileData(
 		chunkHashes[i] = sha256.Sum256(chunk)
 		chunkState, err := uploadState.GetUploadRecord(chunkHashes[i])
 		if err != nil {
-			return nil, nil, fmt.Errorf("error getting chunk state: %v", err)
+			return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 		}
 
 		if chunkState.Completed {
@@ -293,14 +285,14 @@ func PutFileData(
 			}
 			blobcastEnvelopeData, err := proto.Marshal(blobcastEnvelope)
 			if err != nil {
-				return nil, manifest, fmt.Errorf("error marshalling chunk data into blobcast envelope: %v", err)
+				return nil, fileHash, fmt.Errorf("error marshalling chunk data into blobcast envelope: %v", err)
 			}
 			blobcastEnvelopes[i] = blobcastEnvelopeData
 		}
 
 		commitments, height, err := da.StoreBatch(ctx, blobcastEnvelopes)
 		if err != nil {
-			return nil, manifest, fmt.Errorf("error submitting batch %d of %d chunks to Celestia: %v", batchIdx+1, len(batch), err)
+			return nil, fileHash, fmt.Errorf("error submitting batch %d of %d chunks to Celestia: %v", batchIdx+1, len(batch), err)
 		}
 
 		// Add all chunks to the manifest
@@ -320,7 +312,7 @@ func PutFileData(
 
 			chunkState, err := uploadState.GetUploadRecord(chunkHash)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error getting chunk state: %v", err)
+				return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 			}
 
 			chunkId := &types.BlobIdentifier{
@@ -332,7 +324,7 @@ func PutFileData(
 			chunkState.ManifestID = chunkId.ID()
 			err = uploadState.SaveUploadRecord(chunkState)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error saving chunk state: %v", err)
+				return nil, fileHash, fmt.Errorf("error saving chunk state: %v", err)
 			}
 		}
 		chunksSubmitted += len(batch)
@@ -342,12 +334,12 @@ func PutFileData(
 	for i := range chunkHashes {
 		chunkState, err := uploadState.GetUploadRecord(chunkHashes[i])
 		if err != nil {
-			return nil, nil, fmt.Errorf("error getting chunk state: %v", err)
+			return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 		}
 
 		chunkId, err := types.BlobIdentifierFromString(chunkState.ManifestID)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing manifest identifier: %v", err)
+			return nil, fileHash, fmt.Errorf("error parsing manifest identifier: %v", err)
 		}
 
 		manifest.Chunks = append(manifest.Chunks, &pbStorageV1.ChunkReference{
@@ -362,7 +354,7 @@ func PutFileData(
 	// submit file manifest
 	manifestIdentifier, err := PutFileManifest(ctx, da, manifest)
 	if err != nil {
-		return nil, manifest, fmt.Errorf("error submitting file manifest to Celestia: %v", err)
+		return nil, fileHash, fmt.Errorf("error submitting file manifest to Celestia: %v", err)
 	}
 
 	slog.Info(
@@ -377,8 +369,8 @@ func PutFileData(
 	fileState.ManifestID = manifestIdentifier.ID()
 	err = uploadState.SaveUploadRecord(fileState)
 	if err != nil {
-		return nil, manifest, fmt.Errorf("error saving file state: %v", err)
+		return nil, fileHash, fmt.Errorf("error saving file state: %v", err)
 	}
 
-	return manifestIdentifier, manifest, nil
+	return manifestIdentifier, fileHash, nil
 }
