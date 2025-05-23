@@ -8,6 +8,8 @@ import (
 
 	"github.com/celestiaorg/celestia-node/blob"
 	"github.com/forma-dev/blobcast/pkg/celestia"
+	"github.com/forma-dev/blobcast/pkg/crypto"
+	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
 	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"google.golang.org/protobuf/proto"
@@ -337,72 +339,120 @@ func (bc *BlobcastChain) SyncChunk(ctx context.Context, height uint64, blob *blo
 		"commitment", hex.EncodeToString(blob.Commitment),
 		"size", len(chunkData.ChunkData),
 	)
-
-	err := bc.chunkState.Set(state.ChunkKey(blob.Commitment), chunkData.ChunkData)
-	if err != nil {
-		return fmt.Errorf("error saving chunk data: %v", err)
-	}
-	return bc.chunkState.MarkSeen(state.ChunkKey(blob.Commitment), height)
+	return bc.chunkState.Set(state.ChunkKey(blob.Commitment), chunkData.ChunkData)
 }
 
 func (bc *BlobcastChain) SyncFileManifest(ctx context.Context, height uint64, blob *blob.Blob, fileManifest *pbStorageV1.FileManifest) error {
+	manifestId := &types.BlobIdentifier{
+		Height:     height,
+		Commitment: blob.Commitment,
+	}
+
 	slog.Debug("syncing file manifest",
 		"height", height,
 		"commitment", hex.EncodeToString(blob.Commitment),
+		"file_id", manifestId,
 		"file_name", fileManifest.FileName,
 		"file_size", fileManifest.FileSize,
 		"mime_type", fileManifest.MimeType,
 		"num_chunks", len(fileManifest.Chunks),
 	)
 
-	manifestId := &types.BlobIdentifier{
-		Height:     height,
-		Commitment: blob.Commitment,
-	}
+	// verify the file hash
+	fileData := []byte{}
 
 	// all chunks for this file manifest must be seen
 	for _, chunk := range fileManifest.Chunks {
-		seen, err := bc.chunkState.SeenAtHeight(state.ChunkKey(chunk.Id.Commitment), height)
+		chunkData, exists, err := bc.chunkState.Get(state.ChunkKey(chunk.Id.Commitment))
 		if err != nil {
-			return fmt.Errorf("error getting chunk seen height: %v", err)
+			return fmt.Errorf("error getting chunk data: %v", err)
 		}
-		if !seen {
+		if !exists {
 			chunkId := types.BlobIdentifierFromProto(chunk.Id)
-			slog.Debug("file chunk not seen", "chunk_id", chunkId, "commitment", hex.EncodeToString(chunk.Id.Commitment), "file_id", manifestId)
-			slog.Warn("file manifest will not be inlcuded due to missing chunk", "file_id", manifestId)
+			slog.Warn(
+				"file manifest will not be inlcuded due to missing chunk",
+				"file_id", manifestId,
+				"chunk_id", chunkId,
+				"commitment", hex.EncodeToString(chunk.Id.Commitment),
+			)
 			return nil
 		}
+
+		fileData = append(fileData, chunkData...)
+	}
+
+	// Verify file length is correct in manifest
+	if uint64(len(fileData)) != fileManifest.FileSize {
+		slog.Warn("file manifest will not be inlcuded due to file size mismatch",
+			"file_id", manifestId,
+			"expected_size", fileManifest.FileSize,
+			"actual_size", len(fileData),
+		)
+		return nil
+	}
+
+	// verify the file hash
+	fileHash := crypto.HashBytes(fileData)
+	if !fileHash.EqualBytes(fileManifest.FileHash) {
+		slog.Warn("file manifest will not be inlcuded due to hash mismatch",
+			"file_id", manifestId,
+			"expected_hash", hex.EncodeToString(fileManifest.FileHash),
+			"actual_hash", hex.EncodeToString(fileHash[:]),
+		)
+		return nil
 	}
 
 	return bc.manifestState.PutFileManifest(manifestId, fileManifest)
 }
 
 func (bc *BlobcastChain) SyncDirectoryManifest(ctx context.Context, height uint64, blob *blob.Blob, directoryManifest *pbStorageV1.DirectoryManifest) error {
-	slog.Debug("syncing directory manifest",
-		"height", height,
-		"name", directoryManifest.DirectoryName,
-		"commitment", hex.EncodeToString(blob.Commitment),
-		"num_files", len(directoryManifest.Files),
-		"dir_hash", hex.EncodeToString(directoryManifest.DirectoryHash),
-	)
-
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
 		Commitment: blob.Commitment,
 	}
 
+	slog.Debug("syncing directory manifest",
+		"height", height,
+		"name", directoryManifest.DirectoryName,
+		"commitment", hex.EncodeToString(blob.Commitment),
+		"dir_id", manifestId,
+		"num_files", len(directoryManifest.Files),
+		"dir_hash", hex.EncodeToString(directoryManifest.DirectoryHash),
+	)
+
+	// Create merkle root of all file hashes
+	// For merkle roots to match, directory files must be sorted by relative path
+	merkleLeaves := make([][]byte, 0, len(directoryManifest.Files))
+
 	// all files for this directory manifest must be seen
 	for _, file := range directoryManifest.Files {
-		_, found, err := bc.manifestState.GetFileManifest(types.BlobIdentifierFromProto(file.Id))
+		fileId := types.BlobIdentifierFromProto(file.Id)
+		fileManifest, found, err := bc.manifestState.GetFileManifest(fileId)
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
 		}
 		if !found {
-			fileId := types.BlobIdentifierFromProto(file.Id)
-			slog.Debug("file manifest not seen", "file_id", fileId, "dir_id", manifestId)
-			slog.Warn("directory manifest will not be included due to missing file manifest", "dir_id", manifestId)
+			slog.Warn("directory manifest will not be included due to missing file manifest",
+				"dir_id", manifestId,
+				"file_id", fileId,
+				"commitment", hex.EncodeToString(file.Id.Commitment),
+			)
 			return nil
 		}
+
+		fileHash := crypto.HashBytes([]byte(file.RelativePath), fileManifest.FileHash)
+		merkleLeaves = append(merkleLeaves, fileHash.Bytes())
+	}
+
+	dirMerkleRoot := merkle.CalculateMerkleRoot(merkleLeaves)
+
+	if !dirMerkleRoot.EqualBytes(directoryManifest.DirectoryHash) {
+		slog.Warn("directory manifest will not be included due to hash mismatch",
+			"dir_id", manifestId,
+			"expected_hash", hex.EncodeToString(directoryManifest.DirectoryHash),
+			"actual_hash", hex.EncodeToString(dirMerkleRoot[:]),
+		)
+		return nil
 	}
 
 	return bc.manifestState.PutDirectoryManifest(manifestId, directoryManifest)

@@ -20,6 +20,10 @@ func (h Hash) Equal(other Hash) bool {
 	return bytes.Equal(h[:], other[:])
 }
 
+func (h Hash) EqualBytes(other []byte) bool {
+	return bytes.Equal(h[:], other)
+}
+
 func (h Hash) IsZero() bool {
 	return h == Hash{}
 }
