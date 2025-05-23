@@ -7,14 +7,10 @@ import (
 )
 
 var activeNetwork = "mocha"
+var dataDir = ""
 
 func getStateDbPath(stateDb string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("error getting user home directory: %w", err)
-	}
-
-	stateDir := filepath.Join(homeDir, DefaultHomeDir, activeNetwork)
+	stateDir := filepath.Join(dataDir, activeNetwork)
 	if err := os.MkdirAll(stateDir, 0755); err != nil {
 		return "", fmt.Errorf("error creating state directory: %w", err)
 	}
@@ -35,4 +31,12 @@ func SetNetwork(network string) {
 
 func GetNetwork() string {
 	return activeNetwork
+}
+
+func SetDataDir(dir string) {
+	dataDir = dir
+}
+
+func GetDataDir() string {
+	return dataDir
 }

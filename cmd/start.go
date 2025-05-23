@@ -30,17 +30,24 @@ var startCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.Flags().StringVar(&flagGRPCAddress, "grpc-address", "127.0.0.1", "gRPC address")
-	startCmd.Flags().StringVar(&flagGRPCPort, "grpc-port", "50051", "gRPC port")
+	startCmd.Flags().StringVar(&flagGRPCAddress, "grpc-address", "127.0.0.1", "gRPC server address")
+	startCmd.Flags().StringVar(&flagGRPCPort, "grpc-port", "50051", "gRPC server port")
 }
 
 func initStart(cmd *cobra.Command, args []string) error {
-	slog.Debug("Initializing celestia network", "network", flagNetwork)
-	state.SetNetwork(flagNetwork)
+	var chainID string
+	switch flagNetwork {
+	case "mocha":
+		chainID = state.ChainIDMocha
+	case "mammoth":
+		chainID = state.ChainIDMammoth
+	case "celestia":
+		chainID = state.ChainIDCelestia
+	default:
+		return fmt.Errorf("invalid network: %s", flagNetwork)
+	}
 
-	chainID := "blobcast-" + flagNetwork + "-1"
-
-	slog.Debug("Initializing blobcast chain", "chain-id", chainID)
+	slog.Debug("Initializing blobcast chain", "chain_id", chainID)
 	chainState, err := state.GetChainState()
 	if err != nil {
 		return fmt.Errorf("error getting chain state: %v", err)
