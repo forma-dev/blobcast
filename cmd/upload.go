@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
+	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 	"github.com/forma-dev/blobcast/pkg/sync"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,7 @@ func init() {
 	uploadCmd.Flags().StringVarP(&flagFile, "file", "f", "", "File to upload")
 	uploadCmd.Flags().StringVar(&flagMaxBlobSize, "max-blob-size", "384KB", "Max file chunk size (e.g., 1.5MB, 1024KB)")
 	uploadCmd.Flags().StringVar(&flagMaxTxSize, "max-tx-size", "2MB", "Max transaction size (e.g., 32MB, 2097152B)")
+	uploadCmd.Flags().StringVar(&flagGRPCAddr, "node-grpc", getEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
 }
 
 func runUpload(cmd *cobra.Command, args []string) error {
@@ -98,6 +100,9 @@ func runUpload(cmd *cobra.Command, args []string) error {
 		encryptionKey = key
 	}
 
+	// initialize storage client w/ nil client (no connection)
+	storageClient := pbStorageapisV1.NewStorageServiceClient(nil)
+
 	// Initialize Celestia DA client
 	daConfig := celestia.DAConfig{
 		Rpc:         flagRPC,
@@ -111,18 +116,20 @@ func runUpload(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error creating Celestia client: %v", err)
 	}
 
+	// create filesystem client
+	filesystemClient := sync.NewFileSystemClient(storageClient, celestiaDA)
+
 	// do the upload
 	switch {
 	case flagDir != "":
-		manifestIdentifier, _, err := sync.UploadDirectory(context.Background(), celestiaDA, flagDir, maxBlobSize, encryptionKey)
+		manifestIdentifier, _, err := filesystemClient.UploadDirectory(context.Background(), flagDir, maxBlobSize, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error uploading directory: %v", err)
 		}
 		slog.Info("Successfully uploaded directory", "dir", flagDir, "blobcast_url", manifestIdentifier.URL())
 	case flagFile != "":
-		manifestIdentifier, _, err := sync.UploadFile(
+		manifestIdentifier, _, err := filesystemClient.UploadFile(
 			context.Background(),
-			celestiaDA,
 			flagFile,
 			filepath.Base(flagFile),
 			maxBlobSize,

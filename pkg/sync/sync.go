@@ -14,7 +14,6 @@ import (
 	"github.com/forma-dev/blobcast/pkg/types"
 	"google.golang.org/protobuf/proto"
 
-	pbPrimitivesV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
 	pbRollupV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1"
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 )
@@ -192,10 +191,7 @@ func PutFileData(
 		}
 
 		manifest.Chunks = append(manifest.Chunks, &pbStorageV1.ChunkReference{
-			Id: &pbPrimitivesV1.BlobIdentifier{
-				Height:     chunkId.Height,
-				Commitment: chunkId.Commitment,
-			},
+			Id:        chunkId.Proto(),
 			ChunkHash: chunkHashes[i][:],
 		})
 	}

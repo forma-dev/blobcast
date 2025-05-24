@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/forma-dev/blobcast/pkg/api/node"
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
@@ -20,11 +19,23 @@ import (
 	"github.com/forma-dev/blobcast/pkg/storage"
 	"github.com/forma-dev/blobcast/pkg/types"
 
-	pbPrimitivesV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
+	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
-func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, encryptionKey []byte) error {
+type FileSystemClient struct {
+	storageClient pbStorageapisV1.StorageServiceClient
+	da            celestia.BlobStore
+}
+
+func NewFileSystemClient(storageClient pbStorageapisV1.StorageServiceClient, da celestia.BlobStore) *FileSystemClient {
+	return &FileSystemClient{
+		storageClient: storageClient,
+		da:            da,
+	}
+}
+
+func (c *FileSystemClient) ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, encryptionKey []byte) error {
 	targetDir := filepath.Dir(target)
 	fileName := filepath.Base(target)
 
@@ -32,7 +43,9 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 
 	// check if file already exists
 	if storage.Exists(target) {
-		fileManifest, err := node.GetFileManifest(ctx, id)
+		fileManifest, err := c.storageClient.GetFileManifest(ctx, &pbStorageapisV1.GetFileManifestRequest{
+			Id: id.Proto(),
+		})
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
 		}
@@ -44,9 +57,9 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 		}
 
 		// check if file hash matches
-		if uint64(len(fileData)) == fileManifest.FileSize {
+		if uint64(len(fileData)) == fileManifest.Manifest.FileSize {
 			fileHash := sha256.Sum256(fileData)
-			if bytes.Equal(fileHash[:], fileManifest.FileHash) {
+			if bytes.Equal(fileHash[:], fileManifest.Manifest.FileHash) {
 				slog.Info("File already exists", "target_dir", targetDir, "file_name", fileName)
 				return nil
 			}
@@ -54,21 +67,24 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 	}
 
 	// get file data
-	fileData, err := node.GetFileData(ctx, id)
+	fileDataResp, err := c.storageClient.GetFileData(ctx, &pbStorageapisV1.GetFileDataRequest{
+		Id: id.Proto(),
+	})
 	if err != nil {
 		return fmt.Errorf("error getting file data: %v", err)
 	}
 
+	if fileDataResp.Data == nil {
+		return fmt.Errorf("file data is nil")
+	}
+
 	// Apply decryption if needed
-	dataToWrite := fileData
+	dataToWrite := fileDataResp.Data
 	if encryptionKey != nil {
 		slog.Debug("Decrypting file", "target_dir", targetDir, "file_name", fileName)
 
-		// Read the encrypted file
-		encryptedData := fileData // Reuse already read data
-
 		// Decrypt the data
-		decryptedData, err := encryption.Decrypt(encryptedData, encryptionKey)
+		decryptedData, err := encryption.Decrypt(fileDataResp.Data, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error decrypting file %s: %v", target, err)
 		}
@@ -78,8 +94,8 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 		slog.Debug("Decrypted file",
 			"target_dir", targetDir,
 			"file_name", fileName,
-			"encrypted_size", len(encryptedData),
-			"original_size", len(dataToWrite),
+			"encrypted_size", len(fileDataResp.Data),
+			"decrypted_size", len(dataToWrite),
 		)
 	}
 
@@ -98,7 +114,7 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 	return nil
 }
 
-func ExportDirectory(ctx context.Context, id *types.BlobIdentifier, target string, encryptionKey []byte) error {
+func (c *FileSystemClient) ExportDirectory(ctx context.Context, id *types.BlobIdentifier, target string, encryptionKey []byte) error {
 	slog.Info("Exporting directory to disk", "target_dir", target, "blobcast_id", id)
 
 	// Create target directory if it doesn't exist
@@ -106,23 +122,22 @@ func ExportDirectory(ctx context.Context, id *types.BlobIdentifier, target strin
 		return fmt.Errorf("error creating target directory: %v", err)
 	}
 
-	directoryManifest, err := node.GetDirectoryManifest(ctx, id)
+	directoryManifest, err := c.storageClient.GetDirectoryManifest(ctx, &pbStorageapisV1.GetDirectoryManifestRequest{
+		Id: id.Proto(),
+	})
 	if err != nil {
 		return fmt.Errorf("error getting directory manifest: %v", err)
 	}
 
-	for _, fileRef := range directoryManifest.Files {
+	for _, fileRef := range directoryManifest.Manifest.Files {
 		relPath := fileRef.RelativePath
 		targetPath := filepath.Join(target, relPath)
 
 		// Get file manifest to determine file size and hash
-		fileManifestIdentifier := &types.BlobIdentifier{
-			Height:     fileRef.GetId().Height,
-			Commitment: fileRef.GetId().Commitment,
-		}
+		fileManifestIdentifier := types.BlobIdentifierFromProto(fileRef.GetId())
 
 		// Download the file
-		err = ExportFile(ctx, fileManifestIdentifier, targetPath, encryptionKey)
+		err = c.ExportFile(ctx, fileManifestIdentifier, targetPath, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error downloading file %s: %v", relPath, err)
 		}
@@ -132,9 +147,8 @@ func ExportDirectory(ctx context.Context, id *types.BlobIdentifier, target strin
 	return nil
 }
 
-func UploadFile(
+func (c *FileSystemClient) UploadFile(
 	ctx context.Context,
-	da celestia.BlobStore,
 	source string,
 	relativePath string,
 	maxBlobSize int,
@@ -162,7 +176,7 @@ func UploadFile(
 		slog.Debug("Encrypted file", "file_name", relativePath, "file_size", len(data), "encrypted_size", len(dataToProcess))
 	}
 
-	blobIdentifier, fileHash, err := PutFileData(ctx, da, relativePath, dataToProcess, maxBlobSize)
+	blobIdentifier, fileHash, err := PutFileData(ctx, c.da, relativePath, dataToProcess, maxBlobSize)
 	if err != nil {
 		return nil, fileHash, fmt.Errorf("error putting file data: %v", err)
 	}
@@ -170,9 +184,8 @@ func UploadFile(
 	return blobIdentifier, fileHash, nil
 }
 
-func UploadDirectory(
+func (c *FileSystemClient) UploadDirectory(
 	ctx context.Context,
-	da celestia.BlobStore,
 	source string,
 	maxBlobSize int,
 	encryptionKey []byte,
@@ -264,7 +277,7 @@ func UploadDirectory(
 
 	// Upload files
 	for _, file := range filesToUpload {
-		blobIdentifier, fileHash, err := UploadFile(ctx, da, file.path, file.relPath, maxBlobSize, encryptionKey)
+		blobIdentifier, fileHash, err := c.UploadFile(ctx, file.path, file.relPath, maxBlobSize, encryptionKey)
 		if err != nil {
 			return nil, crypto.Hash{}, fmt.Errorf("error uploading file %s: %v", file.path, err)
 		}
@@ -273,10 +286,7 @@ func UploadDirectory(
 		fileHashes[file.relPath] = crypto.HashBytes([]byte(file.relPath), fileHash[:])
 
 		dirManifest.Files = append(dirManifest.Files, &pbStorageV1.FileReference{
-			Id: &pbPrimitivesV1.BlobIdentifier{
-				Height:     blobIdentifier.Height,
-				Commitment: blobIdentifier.Commitment,
-			},
+			Id:           blobIdentifier.Proto(),
 			RelativePath: file.relPath,
 		})
 	}
@@ -300,7 +310,7 @@ func UploadDirectory(
 	dirMerkleRoot := merkle.CalculateMerkleRoot(merkleLeaves)
 	dirManifest.DirectoryHash = dirMerkleRoot.Bytes()
 
-	manifestIdentifier, err := PutDirectoryManifest(ctx, da, dirManifest)
+	manifestIdentifier, err := PutDirectoryManifest(ctx, c.da, dirManifest)
 	if err != nil {
 		return nil, dirMerkleRoot, fmt.Errorf("error uploading directory manifest: %v", err)
 	}
