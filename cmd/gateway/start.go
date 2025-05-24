@@ -1,4 +1,4 @@
-package cmd
+package gateway
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forma-dev/blobcast/cmd"
+	"github.com/forma-dev/blobcast/pkg/net/middleware"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -21,20 +23,21 @@ import (
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
-// serveCmd starts the HTTP explorer.
-var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start a basic HTTP explorer for blobcast manifests",
-	RunE:  runServe,
+var startCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Start a blobcast gateway server",
+	RunE:  runStart,
 }
 
 func init() {
-	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().StringVarP(&flagServePort, "port", "p", "8080", "Port to listen on")
-	serveCmd.Flags().StringVar(&flagGRPCAddr, "node-grpc", getEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
+	gatewayCmd.AddCommand(startCmd)
+	startCmd.Flags().StringVarP(&flagAddr, "addr", "a", "127.0.0.1", "Address to listen on")
+	startCmd.Flags().StringVarP(&flagPort, "port", "p", "8080", "Port to listen on")
+	startCmd.Flags().
+		StringVar(&flagNodeGRPC, "node-grpc", cmd.GetEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
 }
 
-func runServe(cmd *cobra.Command, args []string) error {
+func runStart(command *cobra.Command, args []string) error {
 	// initialize storage client
 	keepaliveParams := keepalive.ClientParameters{
 		Time:                15 * time.Minute,
@@ -42,7 +45,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 		PermitWithoutStream: true,
 	}
 	conn, err := grpc.NewClient(
-		flagGRPCAddr,
+		flagNodeGRPC,
 		grpc.WithKeepaliveParams(keepaliveParams),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)), // 1GB for now
@@ -51,6 +54,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error creating storage client: %v", err)
 	}
 	defer conn.Close()
+
 	storageClient := pbStorageapisV1.NewStorageServiceClient(conn)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,9 +62,9 @@ func runServe(cmd *cobra.Command, args []string) error {
 	})
 
 	// Apply logging middleware
-	loggedHandler := logRequestMiddleware(handler)
+	loggedHandler := middleware.LogRequestMiddleware(handler)
 
-	addr := ":" + flagServePort
+	addr := flagAddr + ":" + flagPort
 	slog.Info("Blobcast explorer listening", "addr", addr)
 	return http.ListenAndServe(addr, loggedHandler)
 }

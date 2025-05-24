@@ -1,13 +1,15 @@
-package cmd
+package files
 
 import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 	"github.com/forma-dev/blobcast/pkg/sync"
@@ -20,25 +22,23 @@ import (
 
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Export a file or directory from Blobcast",
-	Long: `Export a file or directory from Blobcast to disk.
-
-Provide a blobcast URL to export all files from the directory manifest.`,
-	RunE: runExport,
+	Short: "Export a file or directory from Blobcast to disk",
+	RunE:  runExport,
 }
 
 func init() {
-	rootCmd.AddCommand(exportCmd)
+	filesCmd.AddCommand(exportCmd)
 
 	exportCmd.Flags().StringVarP(&flagDir, "dir", "d", "", "Directory to export to")
 	exportCmd.Flags().StringVarP(&flagFile, "file", "f", "", "File to export")
 	exportCmd.Flags().StringVarP(&flagURL, "url", "u", "", "Blobcast URL of the file or directory manifest (required)")
-	exportCmd.Flags().StringVar(&flagGRPCAddr, "node-grpc", getEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
+	exportCmd.Flags().
+		StringVar(&flagNodeGRPC, "node-grpc", cmd.GetEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
 
 	exportCmd.MarkFlagRequired("url")
 }
 
-func runExport(cmd *cobra.Command, args []string) error {
+func runExport(command *cobra.Command, args []string) error {
 	if flagDir == "" && flagFile == "" {
 		return fmt.Errorf("please supply a directory or file to upload")
 	}
@@ -75,9 +75,6 @@ func runExport(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error parsing manifest identifier: %v", err)
 	}
 
-	// Create context for the download operation
-	ctx := context.Background()
-
 	// initialize storage client
 	keepaliveParams := keepalive.ClientParameters{
 		Time:                15 * time.Minute,
@@ -85,7 +82,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		PermitWithoutStream: true,
 	}
 	conn, err := grpc.NewClient(
-		flagGRPCAddr,
+		flagNodeGRPC,
 		grpc.WithKeepaliveParams(keepaliveParams),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)), // 1GB for now
@@ -105,17 +102,17 @@ func runExport(cmd *cobra.Command, args []string) error {
 
 	switch {
 	case flagDir != "":
-		err = filesystemClient.ExportDirectory(ctx, id, flagDir, encryptionKey)
+		err = filesystemClient.ExportDirectory(context.Background(), id, flagDir, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error exporting directory: %v", err)
 		}
-		fmt.Printf("Successfully downloaded directory to %s\n", flagDir)
+		slog.Info("Successfully exported directory", "dir", flagDir, "blobcast_url", flagURL)
 	case flagFile != "":
-		err = filesystemClient.ExportFile(ctx, id, flagFile, encryptionKey)
+		err = filesystemClient.ExportFile(context.Background(), id, flagFile, encryptionKey)
 		if err != nil {
 			return fmt.Errorf("error exporting file: %v", err)
 		}
-		fmt.Printf("Successfully downloaded file to %s\n", flagFile)
+		slog.Info("Successfully exported file", "file", flagFile, "blobcast_url", flagURL)
 	}
 
 	return nil

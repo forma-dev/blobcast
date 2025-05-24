@@ -1,4 +1,4 @@
-package cmd
+package node
 
 import (
 	"context"
@@ -24,59 +24,27 @@ var (
 )
 
 var startCmd = &cobra.Command{
-	Use:     "start",
-	Short:   "Start a blobcast node",
-	RunE:    runStart,
-	PreRunE: initStart,
+	Use:   "start",
+	Short: "Start a blobcast node",
+	RunE:  runStart,
 }
 
 func init() {
-	rootCmd.AddCommand(startCmd)
+	nodeCmd.AddCommand(startCmd)
 	startCmd.Flags().StringVar(&flagGRPCAddress, "grpc-address", "127.0.0.1", "gRPC server address")
 	startCmd.Flags().StringVar(&flagGRPCPort, "grpc-port", "50051", "gRPC server port")
 }
 
-func initStart(cmd *cobra.Command, args []string) error {
-	var chainID string
-	switch flagNetwork {
-	case "mocha":
-		chainID = state.ChainIDMocha
-	case "mammoth":
-		chainID = state.ChainIDMammoth
-	case "celestia":
-		chainID = state.ChainIDCelestia
-	default:
-		return fmt.Errorf("invalid network: %s", flagNetwork)
-	}
-
-	slog.Debug("Initializing blobcast chain", "chain_id", chainID)
-	chainState, err := state.GetChainState()
-	if err != nil {
-		return fmt.Errorf("error getting chain state: %v", err)
-	}
-
-	chainState.SetChainID(chainID)
-
-	switch flagNetwork {
-	case "mocha":
-		chainState.SetCelestiaHeightOffset(state.StartHeightMocha)
-	case "mammoth":
-		chainState.SetCelestiaHeightOffset(state.StartHeightMammoth)
-	case "celestia":
-		chainState.SetCelestiaHeightOffset(state.StartHeightCelestia)
-	default:
-		return fmt.Errorf("invalid network: %s", flagNetwork)
-	}
-
-	return nil
-}
-
 func runStart(cmd *cobra.Command, args []string) error {
+	if err := initNode(); err != nil {
+		return fmt.Errorf("error initializing node: %v", err)
+	}
+
 	// Initialize Celestia DA client
 	daConfig := celestia.DAConfig{
-		Rpc:         flagRPC,
+		Rpc:         flagCelestiaRPC,
 		NamespaceId: state.CelestiaNamespace,
-		AuthToken:   flagAuth,
+		AuthToken:   flagCelestiaAuth,
 		MaxTxSize:   0,
 	}
 

@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Blobcast REST API
   description: The Blobcast REST API provides access to blockchain data, file manifests, and node information.
-  version: 1.0.0
+  version: 0.1.0
   contact:
     name: Forma Team
     url: https://forma.art

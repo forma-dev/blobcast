@@ -1,4 +1,4 @@
-package cmd
+package api
 
 import (
 	"fmt"
@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/api/rest"
+	"github.com/forma-dev/blobcast/pkg/net/middleware"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -16,23 +18,21 @@ import (
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
-var apiCmd = &cobra.Command{
-	Use:   "api",
-	Short: "Start the REST API server",
-	RunE:  runAPI,
+var startCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Start a blobcast REST API server",
+	RunE:  runStart,
 }
-
-var (
-	flagAPIPort string
-)
 
 func init() {
-	rootCmd.AddCommand(apiCmd)
-	apiCmd.Flags().StringVarP(&flagAPIPort, "port", "p", "8081", "Port to listen on")
-	apiCmd.Flags().StringVar(&flagGRPCAddr, "node-grpc", getEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
+	apiCmd.AddCommand(startCmd)
+	startCmd.Flags().StringVarP(&flagAddr, "addr", "a", "127.0.0.1", "Address to listen on")
+	startCmd.Flags().StringVarP(&flagPort, "port", "p", "8081", "Port to listen on")
+	startCmd.Flags().
+		StringVar(&flagNodeGRPC, "node-grpc", cmd.GetEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
 }
 
-func runAPI(cmd *cobra.Command, args []string) error {
+func runStart(command *cobra.Command, args []string) error {
 	// initialize storage client
 	keepaliveParams := keepalive.ClientParameters{
 		Time:                15 * time.Minute,
@@ -40,7 +40,7 @@ func runAPI(cmd *cobra.Command, args []string) error {
 		PermitWithoutStream: true,
 	}
 	conn, err := grpc.NewClient(
-		flagGRPCAddr,
+		flagNodeGRPC,
 		grpc.WithKeepaliveParams(keepaliveParams),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)), // 1GB for now
@@ -56,11 +56,11 @@ func runAPI(cmd *cobra.Command, args []string) error {
 	// Create and start REST API server
 	server := rest.NewServer(storageClient, rollupClient)
 
-	addr := ":" + flagAPIPort
+	addr := flagAddr + ":" + flagPort
 	slog.Info("Starting Blobcast REST API server", "addr", addr)
 
 	handler := server.Router()
-	handler.Use(logRequestMiddleware)
+	handler.Use(middleware.LogRequestMiddleware)
 
 	return http.ListenAndServe(addr, handler)
 }

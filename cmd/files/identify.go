@@ -1,4 +1,4 @@
-package cmd
+package files
 
 import (
 	"encoding/hex"
@@ -10,26 +10,19 @@ import (
 )
 
 var identifyCmd = &cobra.Command{
-	Use:   "identify",
-	Short: "Parse a blobcast URL and display its components",
-	Long: `Parse a blobcast URL and display information about it.
-
-This command extracts and displays the namespace, height, and commitment
-from a blobcast URL, along with validation checks.
-
-Example:
-  blobcast identify --url "blobcast://bc8c7d91baz7sb2p8eyt6n33uqhg0m6jn3"`,
+	Use:     "identify",
+	Short:   "Parse a blobcast URL and display its components",
 	RunE:    runIdentify,
-	Example: `  blobcast identify --url "blobcast://bc8c7d91baz7sb2p8eyt6n33uqhg0m6jn3"`,
+	Example: `  blobcast identify --url "blobcast://bc46nekbubvwcyg34in9p85rfbzd38p6tmg3ep9z9asn2jw5eaefznmzv5yyql"`,
 }
 
 func init() {
-	rootCmd.AddCommand(identifyCmd)
+	filesCmd.AddCommand(identifyCmd)
 	identifyCmd.Flags().StringVarP(&flagURL, "url", "u", "", "Blobcast URL to identify (required)")
 	identifyCmd.MarkFlagRequired("url")
 }
 
-func runIdentify(cmd *cobra.Command, args []string) error {
+func runIdentify(command *cobra.Command, args []string) error {
 	if !strings.HasPrefix(flagURL, "blobcast://") {
 		return fmt.Errorf("invalid URL format: URL must start with 'blobcast://'")
 	}
