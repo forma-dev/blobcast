@@ -70,7 +70,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbStorageapisV1.StorageServiceClient) {
 	rawPath := strings.TrimPrefix(r.URL.Path, "/")
 	if rawPath == "" {
-		fmt.Fprintln(w, "Blobcast explorer – visit /<manifest_id> to browse a manifest")
+		fmt.Fprintln(w, "Blobcast explorer - visit /<manifest_id> to browse a manifest")
 		return
 	}
 
