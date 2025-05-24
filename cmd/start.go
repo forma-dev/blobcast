@@ -90,6 +90,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("error getting chain state: %v", err)
 	}
+	defer chainState.Close()
 
 	blobcastChain, err := sync.NewBlobcastChain(context.Background(), celestiaDA)
 	if err != nil {
