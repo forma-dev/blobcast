@@ -1,0 +1,132 @@
+package cmd
+
+import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/forma-dev/blobcast/pkg/celestia"
+	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
+	"github.com/forma-dev/blobcast/pkg/sync"
+	"github.com/forma-dev/blobcast/pkg/types"
+	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
+)
+
+var exportCmd = &cobra.Command{
+	Use:   "export",
+	Short: "Export a file or directory from Blobcast",
+	Long: `Export a file or directory from Blobcast to disk.
+
+Provide a blobcast URL to export all files from the directory manifest.`,
+	RunE: runExport,
+}
+
+func init() {
+	rootCmd.AddCommand(exportCmd)
+
+	exportCmd.Flags().StringVarP(&flagDir, "dir", "d", "", "Directory to export to")
+	exportCmd.Flags().StringVarP(&flagFile, "file", "f", "", "File to export")
+	exportCmd.Flags().StringVarP(&flagURL, "url", "u", "", "Blobcast URL of the file or directory manifest (required)")
+	exportCmd.Flags().StringVar(&flagGRPCAddr, "node-grpc", getEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
+
+	exportCmd.MarkFlagRequired("url")
+}
+
+func runExport(cmd *cobra.Command, args []string) error {
+	if flagDir == "" && flagFile == "" {
+		return fmt.Errorf("please supply a directory or file to upload")
+	}
+
+	// Validate the target directory
+	if flagDir != "" {
+		flagDir = filepath.Clean(flagDir)
+		if _, err := os.Stat(flagDir); os.IsNotExist(err) {
+			// Create the directory if it doesn't exist
+			if err := os.MkdirAll(flagDir, 0755); err != nil {
+				return fmt.Errorf("error creating directory %s: %v", flagDir, err)
+			}
+		} else if err != nil {
+			return fmt.Errorf("error checking directory: %v", err)
+		}
+	}
+
+	// Process encryption key if provided
+	var encryptionKey []byte
+	if flagEncryptionKey != "" {
+		key, err := hex.DecodeString(flagEncryptionKey)
+		if err != nil {
+			return fmt.Errorf("error decoding encryption key: %v. Key must be a hex-encoded string", err)
+		}
+		if len(key) != 32 { // AES-256 requires a 32-byte key
+			return fmt.Errorf("encryption key must be 32 bytes (64 hex characters) for AES-256")
+		}
+		encryptionKey = key
+	}
+
+	// Parse the manifest identifier from the URL
+	id, err := types.BlobIdentifierFromURL(flagURL)
+	if err != nil {
+		return fmt.Errorf("error parsing manifest identifier: %v", err)
+	}
+
+	// Create context for the download operation
+	ctx := context.Background()
+
+	// initialize storage client
+	keepaliveParams := keepalive.ClientParameters{
+		Time:                15 * time.Minute,
+		Timeout:             60 * time.Second,
+		PermitWithoutStream: true,
+	}
+	conn, err := grpc.NewClient(
+		flagGRPCAddr,
+		grpc.WithKeepaliveParams(keepaliveParams),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)), // 1GB for now
+	)
+	if err != nil {
+		return fmt.Errorf("error creating storage client: %v", err)
+	}
+	defer conn.Close()
+
+	storageClient := pbStorageapisV1.NewStorageServiceClient(conn)
+
+	// Initialize Celestia DA client
+	daConfig := celestia.DAConfig{
+		Rpc:         flagRPC,
+		NamespaceId: flagNamespace,
+		AuthToken:   flagAuth,
+		MaxTxSize:   0,
+	}
+
+	noopDA, err := celestia.NewNoopDA(daConfig)
+	if err != nil {
+		return fmt.Errorf("error creating Celestia client: %v", err)
+	}
+
+	// create filesystem client
+	filesystemClient := sync.NewFileSystemClient(storageClient, noopDA)
+
+	switch {
+	case flagDir != "":
+		err = filesystemClient.ExportDirectory(ctx, id, flagDir, encryptionKey)
+		if err != nil {
+			return fmt.Errorf("error exporting directory: %v", err)
+		}
+		fmt.Printf("Successfully downloaded directory to %s\n", flagDir)
+	case flagFile != "":
+		err = filesystemClient.ExportFile(ctx, id, flagFile, encryptionKey)
+		if err != nil {
+			return fmt.Errorf("error exporting file: %v", err)
+		}
+		fmt.Printf("Successfully downloaded file to %s\n", flagFile)
+	}
+
+	return nil
+}
