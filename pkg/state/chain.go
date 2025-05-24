@@ -32,6 +32,7 @@ type ChainState struct {
 	db                 *pebble.DB
 	pendingTransaction *ChainStateTransaction
 	blockPrefix        []byte
+	blockHashPrefix    []byte
 	stateMMRPrefix     []byte
 	chunkPrefix        []byte
 	fileManifestPrefix []byte
@@ -70,6 +71,7 @@ func openChainState() (*ChainState, error) {
 		db:                 db,
 		pendingTransaction: nil,
 		blockPrefix:        []byte("blk:"),
+		blockHashPrefix:    []byte("blk:h:"),
 		stateMMRPrefix:     []byte("mmr:"),
 		chunkPrefix:        []byte("chk:"),
 		fileManifestPrefix: []byte("man:f:"),
@@ -140,6 +142,9 @@ func (s *ChainState) GetBlock(height uint64) (*types.Block, error) {
 	key := prefixHeightKey(height, s.blockPrefix)
 	blockBytes, closer, err := s.db.Get(key)
 	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer closer.Close()
@@ -150,6 +155,21 @@ func (s *ChainState) GetBlock(height uint64) (*types.Block, error) {
 	}
 
 	return types.BlockFromProto(pbBlock), nil
+}
+
+func (s *ChainState) GetBlockByHash(hash HashKey) (*types.Block, error) {
+	key := prefixKey(hash[:], s.blockHashPrefix)
+	heightBytes, closer, err := s.db.Get(key)
+	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer closer.Close()
+
+	height := binary.BigEndian.Uint64(heightBytes)
+	return s.GetBlock(height)
 }
 
 func (s *ChainState) GetStateMMR(height uint64) (*mmr.MMR, error) {

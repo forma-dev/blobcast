@@ -55,7 +55,17 @@ func (tx *ChainStateTransaction) PutBlock(height uint64, block *types.Block) err
 	if err != nil {
 		return err
 	}
-	return tx.batch.Set(key, blockBytes, nil)
+
+	if err := tx.batch.Set(key, blockBytes, nil); err != nil {
+		return err
+	}
+
+	hash := block.Hash()
+	hashKey := prefixKey(hash.Bytes(), tx.state.blockHashPrefix)
+	heightBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBytes, height)
+
+	return tx.batch.Set(hashKey, heightBytes, nil)
 }
 
 func (tx *ChainStateTransaction) PutChunk(key HashKey, value []byte) error {
