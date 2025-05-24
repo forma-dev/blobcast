@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package blobcast.rollupapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1";
+
+import "blobcast/rollup/v1/block.proto";
+
+message GetLatestBlockResponse {
+  blobcast.rollup.v1.Block block = 1;
+}

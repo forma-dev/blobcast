@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package blobcast.rollupapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1";
+
+message GetChainInfoRequest {
+  // Empty request
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package blobcast.rollupapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1";
+
+message GetChainInfoResponse {
+  string chain_id = 1;
+  uint64 finalized_height = 2;
+  uint64 celestia_height_offset = 3;
+}

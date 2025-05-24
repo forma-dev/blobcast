@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package blobcast.rollupapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1";
+
+import "blobcast/rollupapis/v1/get_block_by_height_request.proto";
+import "blobcast/rollupapis/v1/get_block_by_height_response.proto";
+import "blobcast/rollupapis/v1/get_block_by_hash_request.proto";
+import "blobcast/rollupapis/v1/get_block_by_hash_response.proto";
+import "blobcast/rollupapis/v1/get_latest_block_request.proto";
+import "blobcast/rollupapis/v1/get_latest_block_response.proto";
+import "blobcast/rollupapis/v1/get_chain_info_request.proto";
+import "blobcast/rollupapis/v1/get_chain_info_response.proto";
+import "google/api/annotations.proto";
+
+service RollupService {
+  rpc GetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {
+    option (google.api.http) = {
+      get: "/v1/rollup/blocks/height/{height}"
+    };
+  }
+
+  rpc GetBlockByHash(GetBlockByHashRequest) returns (GetBlockByHashResponse) {
+    option (google.api.http) = {
+      get: "/v1/rollup/blocks/hash/{hash}"
+    };
+  }
+
+  rpc GetLatestBlock(GetLatestBlockRequest) returns (GetLatestBlockResponse) {
+    option (google.api.http) = {
+      get: "/v1/rollup/blocks/latest"
+    };
+  }
+
+  rpc GetChainInfo(GetChainInfoRequest) returns (GetChainInfoResponse) {
+    option (google.api.http) = {
+      get: "/v1/rollup/chain/info"
+    };
+  }
+}
