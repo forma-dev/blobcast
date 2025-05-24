@@ -31,14 +31,10 @@ var serveCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().StringVarP(&flagServePort, "port", "p", "8080", "Port to listen on")
-	serveCmd.Flags().StringVar(&flagGRPCAddr, "storage-grpc", getEnvWithDefault("BLOBCAST_STORAGE_GRPC", "127.0.0.1:50051"), "gRPC address for storage service")
+	serveCmd.Flags().StringVar(&flagGRPCAddr, "node-grpc", getEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"), "gRPC address for a blobcast full node")
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
-	if flagGRPCAddr == "" {
-		return fmt.Errorf("please supply gRPC address via --storage-grpc flag or BLOBCAST_STORAGE_GRPC environment variable")
-	}
-
 	// initialize storage client
 	keepaliveParams := keepalive.ClientParameters{
 		Time:                15 * time.Minute,
@@ -67,47 +63,6 @@ func runServe(cmd *cobra.Command, args []string) error {
 	addr := ":" + flagServePort
 	slog.Info("Blobcast explorer listening", "addr", addr)
 	return http.ListenAndServe(addr, loggedHandler)
-}
-
-// logRequestMiddleware logs information about each HTTP request in a format similar to Nginx
-func logRequestMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		// Create a response writer wrapper to capture the status code
-		rwWrapper := &responseWriterWrapper{
-			ResponseWriter: w,
-			statusCode:     http.StatusOK, // Default to 200 OK
-		}
-
-		// Process the request with the wrapped response writer
-		next.ServeHTTP(rwWrapper, r)
-
-		// Calculate duration
-		duration := time.Since(start)
-
-		// Log the request details
-		slog.Info("HTTP Request",
-			"remote_addr", r.RemoteAddr,
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rwWrapper.statusCode,
-			"duration", duration,
-			"user_agent", r.UserAgent(),
-		)
-	})
-}
-
-// responseWriterWrapper captures the status code of the response
-type responseWriterWrapper struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-// WriteHeader captures the status code before passing it to the wrapped ResponseWriter
-func (rww *responseWriterWrapper) WriteHeader(code int) {
-	rww.statusCode = code
-	rww.ResponseWriter.WriteHeader(code)
 }
 
 // directoryHandler resolves the manifest, fetches the directory manifest
