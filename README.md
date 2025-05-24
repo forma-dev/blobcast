@@ -27,6 +27,9 @@ $ ./build/bin/blobcast start \
 # Start the gateway (http://localhost:8080)
 $ ./build/bin/blobcast serve --port 8080
 
+# Start the REST API
+$ ./build/bin/blobcast api --port 8081
+
 # Upload a directory
 $ ./build/bin/blobcast upload --dir ./my-data \
     --auth $CELESTIA_NODE_AUTH_TOKEN
@@ -65,6 +68,8 @@ See `docs/cli.md` for a full command reference.
 Additional design & developer docs live in the `docs/` folder:
 
 * `docs/architecture.md` – high-level architecture overview
+* `docs/api/api.md` – REST API
+* `docs/api/openapi.yaml` – REST API OpenAPI spec
 
 ---
 

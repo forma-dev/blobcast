@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc/codes"
@@ -47,7 +48,7 @@ type FileManifestResponse struct {
 	FileSize             uint64   `json:"file_size"`
 	FileHash             string   `json:"file_hash"`
 	CompressionAlgorithm string   `json:"compression_algorithm"`
-	ChunkIDs             []string `json:"chunk_ids"`
+	Chunks               []string `json:"chunks"`
 }
 
 type DirectoryManifestResponse struct {
@@ -194,13 +195,13 @@ func (s *Server) getFileManifest(w http.ResponseWriter, r *http.Request) {
 		FileName:             resp.Manifest.FileName,
 		MimeType:             resp.Manifest.MimeType,
 		FileSize:             resp.Manifest.FileSize,
-		FileHash:             hex.EncodeToString(resp.Manifest.FileHash),
+		FileHash:             crypto.Hash(resp.Manifest.FileHash).String(),
 		CompressionAlgorithm: compressionAlgorithmToString(resp.Manifest.CompressionAlgorithm),
-		ChunkIDs:             make([]string, len(resp.Manifest.Chunks)),
+		Chunks:               make([]string, len(resp.Manifest.Chunks)),
 	}
 
 	for i, chunk := range resp.Manifest.Chunks {
-		response.ChunkIDs[i] = types.BlobIdentifierFromProto(chunk.Id).String()
+		response.Chunks[i] = types.BlobIdentifierFromProto(chunk.Id).String()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -227,7 +228,7 @@ func (s *Server) getDirectoryManifest(w http.ResponseWriter, r *http.Request) {
 
 	response := DirectoryManifestResponse{
 		DirectoryName: resp.Manifest.DirectoryName,
-		DirectoryHash: hex.EncodeToString(resp.Manifest.DirectoryHash),
+		DirectoryHash: crypto.Hash(resp.Manifest.DirectoryHash).String(),
 		Files:         make([]FileReferenceResponse, len(resp.Manifest.Files)),
 	}
 

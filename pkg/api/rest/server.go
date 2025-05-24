@@ -1,6 +1,9 @@
 package rest
 
 import (
+	"net/http"
+
+	scalargo "github.com/bdpiprava/scalar-go"
 	"github.com/gorilla/mux"
 
 	pbRollupapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1"
@@ -25,21 +28,36 @@ func NewServer(storageClient pbStorageapisV1.StorageServiceClient, rollupClient 
 
 func (s *Server) setupRoutes() {
 	// Block endpoints
-	s.router.HandleFunc("/api/v1/blocks/latest", s.getLatestBlock).Methods("GET")
-	s.router.HandleFunc("/api/v1/blocks/{heightOrHash}", s.getBlockByHeightOrHash).Methods("GET")
+	s.router.HandleFunc("/v1/blocks/latest", s.getLatestBlock).Methods("GET")
+	s.router.HandleFunc("/v1/blocks/{heightOrHash}", s.getBlockByHeightOrHash).Methods("GET")
 
 	// Manifest endpoints
-	s.router.HandleFunc("/api/v1/manifests/file/{id}", s.getFileManifest).Methods("GET")
-	s.router.HandleFunc("/api/v1/manifests/directory/{id}", s.getDirectoryManifest).Methods("GET")
+	s.router.HandleFunc("/v1/manifests/file/{id}", s.getFileManifest).Methods("GET")
+	s.router.HandleFunc("/v1/manifests/directory/{id}", s.getDirectoryManifest).Methods("GET")
 
 	// File data endpoint
-	// s.router.HandleFunc("/api/v1/files/{id}/data", s.getFileData).Methods("GET") // todo
+	// s.router.HandleFunc("/v1/files/{id}/data", s.getFileData).Methods("GET") // todo
 
 	// Chain info endpoints
-	s.router.HandleFunc("/api/v1/chain/info", s.getChainInfo).Methods("GET")
+	s.router.HandleFunc("/v1/chain/info", s.getChainInfo).Methods("GET")
 
 	// Health check
-	s.router.HandleFunc("/api/v1/health", s.healthCheck).Methods("GET")
+	s.router.HandleFunc("/v1/health", s.healthCheck).Methods("GET")
+
+	// Api docs
+	s.router.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		content, err := scalargo.New(
+			"docs/api",
+			scalargo.WithBaseFileName("openapi.yaml"),
+			scalargo.WithDarkMode(),
+		)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write([]byte(content))
+	}).Methods("GET")
 }
 
 func (s *Server) Router() *mux.Router {

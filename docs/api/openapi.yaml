@@ -1,0 +1,358 @@
+openapi: 3.1.0
+info:
+  title: Blobcast REST API
+  description: The Blobcast REST API provides access to blockchain data, file manifests, and node information.
+  version: 1.0.0
+  contact:
+    name: Forma Team
+    url: https://forma.art
+  license:
+    name: MIT
+    url: https://github.com/forma-dev/blobcast/blob/main/LICENSE
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+paths:
+  /v1/health:
+    get:
+      summary: Health Check
+      description: Check if the API server is running and healthy
+      operationId: getHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+
+  /v1/chain/info:
+    get:
+      summary: Get Chain Information
+      description: Retrieve information about the blockchain including chain ID, finalized height, and Celestia height offset
+      operationId: getChainInfo
+      tags:
+        - Chain
+      responses:
+        '200':
+          description: Chain information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChainInfo'
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /v1/blocks/latest:
+    get:
+      summary: Get Latest Block
+      description: Retrieve the most recently finalized block
+      operationId: getLatestBlock
+      tags:
+        - Blocks
+      responses:
+        '200':
+          description: Latest block retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
+        '404':
+          description: No blocks available
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /v1/blocks/{heightOrHash}:
+    get:
+      summary: Get Block by Height or Hash
+      description: Retrieve a specific block by its height or hash. Height is a numeric value, hash is a 64-character hex string optionally prefixed with 0x
+      operationId: getBlockByHeightOrHash
+      tags:
+        - Blocks
+      parameters:
+        - name: heightOrHash
+          in: path
+          required: true
+          description: Block height (number) or hash (hex string)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Block retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
+        '400':
+          description: Invalid height or hash format
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Block not found
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /v1/manifests/file/{id}:
+    get:
+      summary: Get File Manifest
+      description: Retrieve a file manifest by its blob identifier
+      operationId: getFileManifest
+      tags:
+        - Manifests
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: File manifest blob identifier (format height-commitment)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File manifest retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileManifest'
+        '400':
+          description: Invalid manifest ID format
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Manifest not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /v1/manifests/directory/{id}:
+    get:
+      summary: Get Directory Manifest
+      description: Retrieve a directory manifest by its blob identifier
+      operationId: getDirectoryManifest
+      tags:
+        - Manifests
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Directory manifest blob identifier (format height-commitment)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Directory manifest retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryManifest'
+        '400':
+          description: Invalid manifest ID format
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Manifest not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    ChainInfo:
+      type: object
+      properties:
+        chain_id:
+          type: string
+          description: The chain identifier
+          example: blobcast-mocha-1
+        finalized_height:
+          type: integer
+          format: int64
+          description: The current finalized block height
+          example: 12345
+        celestia_height_offset:
+          type: integer
+          format: int64
+          description: The Celestia blockchain height offset
+          example: 1000000
+
+    Block:
+      type: object
+      properties:
+        chain_id:
+          type: string
+          description: The chain identifier
+          example: blobcast-mocha-1
+        height:
+          type: integer
+          format: int64
+          description: The block height
+          example: 12345
+        celestia_block_height:
+          type: integer
+          format: int64
+          description: The corresponding Celestia block height
+          example: 1012345
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp of the block
+          example: 1634567890
+        hash:
+          type: string
+          description: The block hash (hex encoded)
+          example: "0x076692e52e2e607ac72aedb377fa494b55584c3145e8c1d4bd4a87675f281db5"
+        parent_hash:
+          type: string
+          description: The parent block hash (hex encoded)
+          example: "0xc20d528f66bebd7580b22db7f364130456c5ed3a309527710ea19591cdb04680"
+        dirs_root:
+          type: string
+          description: Merkle root of directory identifiers (hex encoded)
+          example: "0x52d8ddf2c2bd899eec5b8a6520c26acc982a0015a4f59aef7c0911fd56f3b398"
+        files_root:
+          type: string
+          description: Merkle root of file identifiers (hex encoded)
+          example: "0x2b0ff94c95dffb9d761c8978e860fb9208e67ba23964c64b5b21147f837b6a15"
+        chunks_root:
+          type: string
+          description: Merkle root of chunk identifiers (hex encoded)
+          example: "0x413fccd4c7efabfe1369b658187616842b5ca19192f7974cb075f0e9c6653eab"
+        state_root:
+          type: string
+          description: State merkle root (hex encoded)
+          example: "0x577f8b45009d0cc39cdd7052e1d89be79b454b814955eef5e011bfb061b25fc3"
+        chunks:
+          type: array
+          description: List of chunk blob identifiers in this block
+          items:
+            type: string
+          example:
+            - bc4edsc8685ikoo8jfrrxhp2s08u7gce6lb8h43gjdtyk8pdgzn588qo3wrte0
+            - bc4edsc8685ih5dj4j4nmbu1a2r9zwjt969on36p7kiaqxcqk2tujk2axp4j8c
+        files:
+          type: array
+          description: List of file manifest blob identifiers in this block
+          items:
+            type: string
+            example: bc4eg9v32884hbbr3e5xpdr6td15241pl9ou0ub9gh84r1nu73wjvrtf21snbe
+        dirs:
+          type: array
+          description: List of directory manifest blob identifiers in this block
+          items:
+            type: string
+            example: bc4eirdxy8aqlb712eejzzv4glu96knlj01suk412eauxhofrk2z2dl8zea4ts
+
+    FileManifest:
+      type: object
+      properties:
+        file_name:
+          type: string
+          description: The name of the file
+          example: blobcast.png
+        mime_type:
+          type: string
+          description: MIME type of the file
+          example: image/png
+        file_size:
+          type: integer
+          format: int64
+          description: Size of the file in bytes
+          example: 3606197
+        file_hash:
+          type: string
+          description: SHA256 hash of the file (hex encoded)
+          example: "0xe88982ad2e61bc38a1ae7b726aff9dc29d876a18e0af294d67e9cf75d6235903"
+        compression_algorithm:
+          type: string
+          description: Compression algorithm used
+          example: none
+        chunks:
+          type: array
+          description: List of chunk blob identifiers that make up this file
+          items:
+            type: string
+            example:
+              - bc46ifim2bqogk2hm8tz44t3by3y58face6w6hni27f6yxv56pqt6yc1i53nwc
+              - bc46ifim2bqoey3cqkhxk7rud1h46wkaywvj6zuyh7mk88gafhg8xs7m3vvq77
+              - bc46ifim2bqodrokchg6n6ehvpuujo5i13cr6ly80lbq7x4qra3wkgy7gg0jsp
+              - bc46ifim2bqoefk0b8sm67u877dgtx8b79gc0u7yiq5or9umrrf260qcuadl5d
+              - bc46ifim2bqofsof5rn1fliyl5defmxfplh60yfk70stjrj90pro6pl86pghts
+              - bc46kx1gybtabdoyihx0io8teeqd8xnx3gdgit0nlknrab2zq6i1b8m3cufysl
+              - bc46kx1gybtag7p2ztqn45h3u99e4zi9pfr2pmy2q54zdti7pas3na0yeo9bvb
+              - bc46kx1gybtaaev1qlg1etsoyaypgq610n5ga877gctzr2xwc8wn1janmhye7q
+              - bc46kx1gybtaf78qzroaabq43k2j7ltgu0huyldoo7zxmvr3no1eccus2mz5hd
+              - bc46kx1gybtae2mm5wmmwuxzqittifbabaj1po395bsndlk8hlk72kwz6hha40
+
+    DirectoryManifest:
+      type: object
+      properties:
+        directory_name:
+          type: string
+          description: The name of the directory
+          example: my-project
+        directory_hash:
+          type: string
+          description: Hash of the directory contents (hex encoded)
+          example: "0xf64ea911fde909a2fda5f2ec0c58ba4ad479b808299f7752fb7b3fe742c906a7"
+        files:
+          type: array
+          description: List of files in the directory
+          items:
+            $ref: '#/components/schemas/FileReference'
+
+    FileReference:
+      type: object
+      properties:
+        id:
+          type: string
+          description: File manifest blob identifier
+          example: bc4e6brni7xolr72qj2xxl0x46bbrpn1jo3o4xonovm6n2tn7j2lshfkfdxk3u
+        relative_path:
+          type: string
+          description: Relative path of the file within the directory
+          example: images/6k/52259221868_e86daccb7d_6k.jpg
+
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Chain
+    description: Blockchain information endpoints
+  - name: Blocks
+    description: Block retrieval endpoints
+  - name: Manifests
+    description: File and directory manifest endpoints
