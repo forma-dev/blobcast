@@ -17,12 +17,12 @@ type NoopDA struct {
 	nextH     uint64
 }
 
-func NewNoopDA(cfg DAConfig) (*NoopDA, error) {
-	ns, err := HexToNamespaceV0(cfg.NamespaceId)
-	if err != nil {
-		return nil, err
-	}
-	return &NoopDA{cfg: cfg, namespace: ns, nextH: 1}, nil
+func NewNoopDA() (*NoopDA, error) {
+	return &NoopDA{
+		cfg:       DAConfig{},
+		namespace: share.Namespace{},
+		nextH:     1,
+	}, nil
 }
 
 func (d *NoopDA) Namespace() share.Namespace { return d.namespace }

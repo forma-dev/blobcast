@@ -97,18 +97,8 @@ func runExport(cmd *cobra.Command, args []string) error {
 
 	storageClient := pbStorageapisV1.NewStorageServiceClient(conn)
 
-	// Initialize Celestia DA client
-	daConfig := celestia.DAConfig{
-		Rpc:         flagRPC,
-		NamespaceId: flagNamespace,
-		AuthToken:   flagAuth,
-		MaxTxSize:   0,
-	}
-
-	noopDA, err := celestia.NewNoopDA(daConfig)
-	if err != nil {
-		return fmt.Errorf("error creating Celestia client: %v", err)
-	}
+	// Initialize Noop DA client (not used for export)
+	noopDA, _ := celestia.NewNoopDA()
 
 	// create filesystem client
 	filesystemClient := sync.NewFileSystemClient(storageClient, noopDA)
