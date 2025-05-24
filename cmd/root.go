@@ -14,7 +14,6 @@ import (
 var (
 	flagDir           string
 	flagFile          string
-	flagNamespace     string
 	flagAuth          string
 	flagRPC           string
 	flagNetwork       string
@@ -31,11 +30,11 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "blobcast",
-	Short: "Blobcast uploads and downloads files using Celestia",
-	Long: `Blobcast is a tool for uploading and downloading files using Celestia as a data availability layer.
+	Short: "Blobcast is a minimal based rollup for publishing and retrieving files",
+	Long: `Blobcast is a minimal based rollup for publishing and retrieving files on top of Celestia's data availability layer.
 
-It can upload an entire directory structure to Celestia and create a manifest that can be used
-to download the files later. Files can optionally be encrypted for privacy.`,
+Files are chunked, submitted to Celestia, and tracked by manifests. Blobcast nodes derive blockchain state 
+from Celestia blocks to provide content-addressable file storage with cryptographic integrity guarantees.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -53,7 +52,6 @@ func init() {
 	defaultAppDataDir := filepath.Join(homeDir, ".blobcast")
 
 	rootCmd.PersistentFlags().StringVar(&flagAppDataDir, "data-dir", getEnvWithDefault("BLOBCAST_DATA_DIR", defaultAppDataDir), "Path to the app data directory")
-	rootCmd.PersistentFlags().StringVar(&flagNamespace, "namespace", getEnvWithDefault("BLOBCAST_NAMESPACE", "626C6F62636173742D31"), "Target namespace")
 	rootCmd.PersistentFlags().StringVar(&flagNetwork, "network", getEnvWithDefault("BLOBCAST_CELESTIA_NETWORK", "mocha"), "Celestia network")
 	rootCmd.PersistentFlags().StringVar(&flagAuth, "auth", getEnvWithDefault("BLOBCAST_CELESTIA_NODE_AUTH_TOKEN", ""), "Celestia node auth token")
 	rootCmd.PersistentFlags().StringVar(&flagRPC, "rpc", getEnvWithDefault("BLOBCAST_CELESTIA_NODE_RPC", "ws://localhost:26658"), "Celestia RPC node endpoint")

@@ -75,7 +75,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	// Initialize Celestia DA client
 	daConfig := celestia.DAConfig{
 		Rpc:         flagRPC,
-		NamespaceId: flagNamespace,
+		NamespaceId: state.CelestiaNamespace,
 		AuthToken:   flagAuth,
 		MaxTxSize:   0,
 	}

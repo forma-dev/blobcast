@@ -10,6 +10,7 @@ import (
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
+	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/forma-dev/blobcast/pkg/sync"
 	"github.com/spf13/cobra"
 )
@@ -106,7 +107,7 @@ func runUpload(cmd *cobra.Command, args []string) error {
 	// Initialize Celestia DA client
 	daConfig := celestia.DAConfig{
 		Rpc:         flagRPC,
-		NamespaceId: flagNamespace,
+		NamespaceId: state.CelestiaNamespace,
 		AuthToken:   flagAuth,
 		MaxTxSize:   maxTxSize,
 	}
