@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/forma-dev/blobcast/pkg/api"
+	"github.com/forma-dev/blobcast/pkg/api/node"
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
@@ -32,7 +32,7 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 
 	// check if file already exists
 	if storage.Exists(target) {
-		fileManifest, err := api.GetFileManifest(ctx, id)
+		fileManifest, err := node.GetFileManifest(ctx, id)
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
 		}
@@ -54,7 +54,7 @@ func ExportFile(ctx context.Context, id *types.BlobIdentifier, target string, en
 	}
 
 	// get file data
-	fileData, err := api.GetFileData(ctx, id)
+	fileData, err := node.GetFileData(ctx, id)
 	if err != nil {
 		return fmt.Errorf("error getting file data: %v", err)
 	}
@@ -106,7 +106,7 @@ func ExportDirectory(ctx context.Context, id *types.BlobIdentifier, target strin
 		return fmt.Errorf("error creating target directory: %v", err)
 	}
 
-	directoryManifest, err := api.GetDirectoryManifest(ctx, id)
+	directoryManifest, err := node.GetDirectoryManifest(ctx, id)
 	if err != nil {
 		return fmt.Errorf("error getting directory manifest: %v", err)
 	}
