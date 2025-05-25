@@ -1,13 +1,13 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 	"sync"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/forma-dev/blobcast/pkg/crypto/mmr"
 	"github.com/forma-dev/blobcast/pkg/types"
+	"github.com/forma-dev/blobcast/pkg/util"
 	"google.golang.org/protobuf/proto"
 
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
@@ -35,9 +35,7 @@ func NewChainStateTransaction(state *ChainState) *ChainStateTransaction {
 }
 
 func (tx *ChainStateTransaction) SetFinalizedHeight(height uint64) error {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, height)
-	return tx.batch.Set([]byte(keyFinalizedHeight), buf, nil)
+	return tx.batch.Set([]byte(keyFinalizedHeight), util.BytesFromUint64(height), nil)
 }
 
 func (tx *ChainStateTransaction) PutStateMMR(height uint64, mmr *mmr.MMR) error {
@@ -51,21 +49,13 @@ func (tx *ChainStateTransaction) PutStateMMR(height uint64, mmr *mmr.MMR) error 
 
 func (tx *ChainStateTransaction) PutBlock(height uint64, block *types.Block) error {
 	key := prefixHeightKey(height, tx.state.blockPrefix)
-	blockBytes, err := proto.Marshal(block.Proto())
-	if err != nil {
-		return err
-	}
-
-	if err := tx.batch.Set(key, blockBytes, nil); err != nil {
+	if err := tx.batch.Set(key, block.Bytes(), nil); err != nil {
 		return err
 	}
 
 	hash := block.Hash()
 	hashKey := prefixKey(hash.Bytes(), tx.state.blockHashPrefix)
-	heightBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(heightBytes, height)
-
-	return tx.batch.Set(hashKey, heightBytes, nil)
+	return tx.batch.Set(hashKey, util.BytesFromUint64(height), nil)
 }
 
 func (tx *ChainStateTransaction) PutChunk(key HashKey, value []byte) error {

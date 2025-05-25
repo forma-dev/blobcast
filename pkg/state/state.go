@@ -1,10 +1,11 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/forma-dev/blobcast/pkg/util"
 )
 
 var activeNetwork = "mocha"
@@ -20,17 +21,14 @@ func getStateDbPath(stateDb string) (string, error) {
 }
 
 func prefixKey(key []byte, prefix []byte) []byte {
-	prefixedKey := make([]byte, len(prefix)+len(key))
-	copy(prefixedKey, prefix)
-	copy(prefixedKey[len(prefix):], key)
-	return prefixedKey
+	k := make([]byte, len(prefix)+len(key))
+	copy(k, prefix)
+	copy(k[len(prefix):], key)
+	return k
 }
 
 func prefixHeightKey(height uint64, prefix []byte) []byte {
-	k := make([]byte, len(prefix)+8)
-	copy(k, prefix)
-	binary.BigEndian.PutUint64(k[len(prefix):], height)
-	return k
+	return prefixKey(util.BytesFromUint64(height), prefix)
 }
 
 func SetNetwork(network string) {

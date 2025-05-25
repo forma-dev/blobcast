@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"google.golang.org/protobuf/proto"
 
@@ -31,7 +32,7 @@ func PutDirectoryManifest(ctx context.Context, da celestia.BlobStore, directoryM
 
 	return &types.BlobIdentifier{
 		Height:     dirManifestHeight,
-		Commitment: dirManifestCommitment,
+		Commitment: crypto.Hash(dirManifestCommitment),
 	}, nil
 }
 
@@ -54,6 +55,6 @@ func PutFileManifest(ctx context.Context, da celestia.BlobStore, fileManifest *p
 
 	return &types.BlobIdentifier{
 		Height:     fileManifestHeight,
-		Commitment: fileManifestCommitment,
+		Commitment: crypto.Hash(fileManifestCommitment),
 	}, nil
 }

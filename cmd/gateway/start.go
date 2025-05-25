@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/forma-dev/blobcast/cmd"
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/net/middleware"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"github.com/spf13/cobra"
@@ -125,7 +126,7 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 		if f.RelativePath == subPath {
 			fileManifestIdentifier := &types.BlobIdentifier{
 				Height:     f.Id.Height,
-				Commitment: f.Id.Commitment,
+				Commitment: crypto.Hash(f.Id.Commitment),
 			}
 			serveFile(w, r, storageClient, fileManifestIdentifier)
 			return
@@ -222,7 +223,7 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 			if f.RelativePath == filePath || (subPath == "" && f.RelativePath == name) {
 				fileManifestIdentifier = &types.BlobIdentifier{
 					Height:     f.Id.Height,
-					Commitment: f.Id.Commitment,
+					Commitment: crypto.Hash(f.Id.Commitment),
 				}
 
 				fileManifestResponse, err := storageClient.GetFileManifest(context.Background(), &pbStorageapisV1.GetFileManifestRequest{

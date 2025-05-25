@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+func ShortStringFromBytes(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	return string(b[1:])
+}
+
 // parseSizeString converts a size string (e.g., "1.5MB", "1024KB") to bytes.
 func ParseSizeString(sizeStr string) (int, error) {
 	sizeStr = strings.TrimSpace(sizeStr)

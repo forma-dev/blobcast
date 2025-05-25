@@ -165,7 +165,7 @@ func PutFileData(
 
 			chunkId := &types.BlobIdentifier{
 				Height:     height,
-				Commitment: commitment,
+				Commitment: crypto.Hash(commitment),
 			}
 
 			chunkState.Completed = true

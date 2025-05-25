@@ -1,7 +1,6 @@
 package state
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sync"
@@ -9,9 +8,9 @@ import (
 	"github.com/cockroachdb/pebble"
 	"github.com/forma-dev/blobcast/pkg/crypto/mmr"
 	"github.com/forma-dev/blobcast/pkg/types"
+	"github.com/forma-dev/blobcast/pkg/util"
 	"google.golang.org/protobuf/proto"
 
-	pbRollupV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1"
 	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 )
 
@@ -116,13 +115,11 @@ func (s *ChainState) CelestiaHeightOffset() (uint64, error) {
 	}
 	defer closer.Close()
 
-	return binary.BigEndian.Uint64(offset), nil
+	return util.Uint64FromBytes(offset), nil
 }
 
 func (s *ChainState) SetCelestiaHeightOffset(offset uint64) error {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, offset)
-	return s.db.Set([]byte(keyCelestiaHeightOffset), buf, nil)
+	return s.db.Set([]byte(keyCelestiaHeightOffset), util.BytesFromUint64(offset), nil)
 }
 
 func (s *ChainState) FinalizedHeight() (uint64, error) {
@@ -135,7 +132,7 @@ func (s *ChainState) FinalizedHeight() (uint64, error) {
 	}
 	defer closer.Close()
 
-	return binary.BigEndian.Uint64(height), nil
+	return util.Uint64FromBytes(height), nil
 }
 
 func (s *ChainState) GetBlock(height uint64) (*types.Block, error) {
@@ -149,12 +146,7 @@ func (s *ChainState) GetBlock(height uint64) (*types.Block, error) {
 	}
 	defer closer.Close()
 
-	pbBlock := &pbRollupV1.Block{}
-	if err := proto.Unmarshal(blockBytes, pbBlock); err != nil {
-		return nil, err
-	}
-
-	return types.BlockFromProto(pbBlock), nil
+	return types.BlockFromBytes(blockBytes), nil
 }
 
 func (s *ChainState) GetBlockByHash(hash HashKey) (*types.Block, error) {
@@ -168,7 +160,7 @@ func (s *ChainState) GetBlockByHash(hash HashKey) (*types.Block, error) {
 	}
 	defer closer.Close()
 
-	height := binary.BigEndian.Uint64(heightBytes)
+	height := util.Uint64FromBytes(heightBytes)
 	return s.GetBlock(height)
 }
 

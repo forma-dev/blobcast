@@ -5,16 +5,16 @@ import (
 	"strings"
 
 	"github.com/multiformats/go-base36"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
 	pbPrimitivesV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
+	"github.com/forma-dev/blobcast/pkg/util"
 )
 
 type BlobIdentifier struct {
 	Height     uint64
-	Commitment []byte
+	Commitment crypto.Hash
 }
 
 func BlobIdentifierFromString(encoded string) (*BlobIdentifier, error) {
@@ -27,16 +27,7 @@ func BlobIdentifierFromString(encoded string) (*BlobIdentifier, error) {
 		return nil, fmt.Errorf("error decoding base36 data: %w", err)
 	}
 
-	// Unmarshal proto
-	protoManifest := &pbPrimitivesV1.BlobIdentifier{}
-	if err := proto.Unmarshal(serialized, protoManifest); err != nil {
-		return nil, fmt.Errorf("error unmarshalling manifest identifier: %w", err)
-	}
-
-	return &BlobIdentifier{
-		Height:     protoManifest.Height,
-		Commitment: protoManifest.Commitment,
-	}, nil
+	return BlobIdentifierFromBytes(serialized), nil
 }
 
 func BlobIdentifierFromURL(url string) (*BlobIdentifier, error) {
@@ -49,7 +40,14 @@ func BlobIdentifierFromURL(url string) (*BlobIdentifier, error) {
 func BlobIdentifierFromProto(proto *pbPrimitivesV1.BlobIdentifier) *BlobIdentifier {
 	return &BlobIdentifier{
 		Height:     proto.Height,
-		Commitment: proto.Commitment,
+		Commitment: crypto.Hash(proto.Commitment),
+	}
+}
+
+func BlobIdentifierFromBytes(b []byte) *BlobIdentifier {
+	return &BlobIdentifier{
+		Height:     util.Uint64FromBytes(b[:8]),
+		Commitment: crypto.Hash(b[8:]),
 	}
 }
 
@@ -66,23 +64,13 @@ func (b *BlobIdentifier) ID() string {
 }
 
 func (b *BlobIdentifier) Bytes() []byte {
-	protoManifest := &pbPrimitivesV1.BlobIdentifier{
-		Height:     b.Height,
-		Commitment: b.Commitment,
-	}
-
-	serialized, err := proto.Marshal(protoManifest)
-	if err != nil {
-		return nil
-	}
-
-	return serialized
+	return append(util.BytesFromUint64(b.Height), b.Commitment.Bytes()...)
 }
 
 func (b *BlobIdentifier) Proto() *pbPrimitivesV1.BlobIdentifier {
 	return &pbPrimitivesV1.BlobIdentifier{
 		Height:     b.Height,
-		Commitment: b.Commitment,
+		Commitment: b.Commitment.Bytes(),
 	}
 }
 

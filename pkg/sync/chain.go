@@ -350,7 +350,7 @@ func (bc *BlobcastChain) SyncBlobs(
 
 		blobId := &types.BlobIdentifier{
 			Height:     height,
-			Commitment: blob.Commitment,
+			Commitment: crypto.Hash(blob.Commitment),
 		}
 
 		var syncErr error
@@ -402,7 +402,7 @@ func (bc *BlobcastChain) SyncFileManifest(
 ) error {
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
-		Commitment: blob.Commitment,
+		Commitment: crypto.Hash(blob.Commitment),
 	}
 
 	slog.Debug("syncing file manifest",
@@ -471,7 +471,7 @@ func (bc *BlobcastChain) SyncDirectoryManifest(
 ) error {
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
-		Commitment: blob.Commitment,
+		Commitment: crypto.Hash(blob.Commitment),
 	}
 
 	slog.Debug("syncing directory manifest",

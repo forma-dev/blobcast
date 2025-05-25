@@ -33,7 +33,7 @@ func runIdentify(command *cobra.Command, args []string) error {
 	}
 
 	height := identifier.Height
-	commitment := hex.EncodeToString(identifier.Commitment)
+	commitment := hex.EncodeToString(identifier.Commitment.Bytes())
 
 	fmt.Println("\nBlobcast URL Information:")
 	fmt.Println("========================")
