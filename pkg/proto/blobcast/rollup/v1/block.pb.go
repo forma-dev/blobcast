@@ -25,6 +25,7 @@ type Block struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Header        *BlockHeader           `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
 	Body          *BlockBody             `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	Hash          []byte                 `protobuf:"bytes,3,opt,name=hash,proto3" json:"hash,omitempty"` // bytes32
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,14 +74,22 @@ func (x *Block) GetBody() *BlockBody {
 	return nil
 }
 
+func (x *Block) GetHash() []byte {
+	if x != nil {
+		return x.Hash
+	}
+	return nil
+}
+
 var File_blobcast_rollup_v1_block_proto protoreflect.FileDescriptor
 
 const file_blobcast_rollup_v1_block_proto_rawDesc = "" +
 	"\n" +
-	"\x1eblobcast/rollup/v1/block.proto\x12\x12blobcast.rollup.v1\x1a%blobcast/rollup/v1/block_header.proto\x1a#blobcast/rollup/v1/block_body.proto\"s\n" +
+	"\x1eblobcast/rollup/v1/block.proto\x12\x12blobcast.rollup.v1\x1a%blobcast/rollup/v1/block_header.proto\x1a#blobcast/rollup/v1/block_body.proto\"\x87\x01\n" +
 	"\x05Block\x127\n" +
 	"\x06header\x18\x01 \x01(\v2\x1f.blobcast.rollup.v1.BlockHeaderR\x06header\x121\n" +
-	"\x04body\x18\x02 \x01(\v2\x1d.blobcast.rollup.v1.BlockBodyR\x04bodyB<Z:github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1b\x06proto3"
+	"\x04body\x18\x02 \x01(\v2\x1d.blobcast.rollup.v1.BlockBodyR\x04body\x12\x12\n" +
+	"\x04hash\x18\x03 \x01(\fR\x04hashB<Z:github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1b\x06proto3"
 
 var (
 	file_blobcast_rollup_v1_block_proto_rawDescOnce sync.Once

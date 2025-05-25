@@ -10,4 +10,5 @@ import "blobcast/rollup/v1/block_body.proto";
 message Block {
   BlockHeader header = 1;
   BlockBody body = 2;
+  bytes hash = 3; // bytes32
 }
