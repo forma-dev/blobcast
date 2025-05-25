@@ -13,18 +13,32 @@ var templateFS embed.FS
 //go:embed static
 var staticFS embed.FS
 
-var templates *template.Template
+var homeTemplate *template.Template
+var directoryTemplate *template.Template
 
 func init() {
 	var err error
-	templates, err = template.New("").ParseFS(templateFS, "templates/*.html")
+	homeTemplate, err = template.New("home").ParseFS(templateFS, "templates/base.html", "templates/home.html")
 	if err != nil {
-		panic("Failed to parse templates: " + err.Error())
+		panic("Failed to parse home templates: " + err.Error())
+	}
+
+	directoryTemplate, err = template.New("directory").ParseFS(templateFS, "templates/base.html", "templates/directory.html")
+	if err != nil {
+		panic("Failed to parse directory templates: " + err.Error())
 	}
 }
 
-type TemplateData struct {
-	Title       string
+type BaseTemplateData struct {
+	Title string
+}
+
+type HomeTemplateData struct {
+	BaseTemplateData
+}
+
+type DirectoryTemplateData struct {
+	BaseTemplateData
 	ManifestID  string
 	DisplayID   string
 	SubPath     string
@@ -69,6 +83,15 @@ func ServeStatic(w http.ResponseWriter, r *http.Request) {
 	w.Write(content)
 }
 
-func RenderDirectory(w http.ResponseWriter, data TemplateData) error {
-	return templates.ExecuteTemplate(w, "base.html", data)
+func RenderHome(w http.ResponseWriter) error {
+	data := HomeTemplateData{
+		BaseTemplateData: BaseTemplateData{
+			Title: "Blobcast Explorer",
+		},
+	}
+	return homeTemplate.ExecuteTemplate(w, "home.html", data)
+}
+
+func RenderDirectory(w http.ResponseWriter, data DirectoryTemplateData) error {
+	return directoryTemplate.ExecuteTemplate(w, "directory.html", data)
 }

@@ -13,7 +13,10 @@
         </div>
     </header>
     <main>
-        {{template "content" .}}
+      {{block "content" .}}
+      <!-- Default content if no template defines this block -->
+      <p>Welcome to Blobcast</p>
+      {{end}}
     </main>
 </body>
 </html>

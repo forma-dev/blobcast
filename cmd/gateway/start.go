@@ -79,7 +79,10 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 
 	rawPath := strings.TrimPrefix(r.URL.Path, "/")
 	if rawPath == "" {
-		fmt.Fprintln(w, "Blobcast explorer - visit /<manifest_id> to browse a manifest")
+		if err := RenderHome(w); err != nil {
+			slog.Error("Template rendering error", "error", err)
+			http.Error(w, "Template error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -156,8 +159,10 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 	}
 
 	// Build template data
-	data := TemplateData{
-		Title:       "Blobcast – " + manifestID,
+	data := DirectoryTemplateData{
+		BaseTemplateData: BaseTemplateData{
+			Title: "Blobcast - " + manifestID,
+		},
 		ManifestID:  manifestID,
 		DisplayID:   displayID,
 		SubPath:     subPath,
