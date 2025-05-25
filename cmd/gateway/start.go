@@ -3,7 +3,6 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"html"
 	"log/slog"
 	"net/http"
 	"path/filepath"
@@ -72,6 +71,12 @@ func runStart(command *cobra.Command, args []string) error {
 // directoryHandler resolves the manifest, fetches the directory manifest
 // from Celestia and renders a minimal HTML view.
 func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbStorageapisV1.StorageServiceClient) {
+	// Handle static files
+	if strings.HasPrefix(r.URL.Path, "/static/") {
+		ServeStatic(w, r)
+		return
+	}
+
 	rawPath := strings.TrimPrefix(r.URL.Path, "/")
 	if rawPath == "" {
 		fmt.Fprintln(w, "Blobcast explorer - visit /<manifest_id> to browse a manifest")
@@ -114,13 +119,11 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 
 	// Check if the subPath is a file in the manifest
 	for _, f := range dirManifest.Files {
-		// This is a file request - serve the file content
 		if f.RelativePath == subPath {
 			fileManifestIdentifier := &types.BlobIdentifier{
 				Height:     f.Id.Height,
 				Commitment: f.Id.Commitment,
 			}
-
 			serveFile(w, r, storageClient, fileManifestIdentifier)
 			return
 		}
@@ -138,136 +141,39 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 			rel = strings.TrimPrefix(rel, subPath+"/")
 		}
 
-		// If the relative path has no slashes, it's a file in this directory
 		if !strings.Contains(rel, "/") {
 			children[rel] = false
 		} else {
-			// It's in a subdirectory
 			first := strings.SplitN(rel, "/", 2)[0]
 			children[first] = true
 		}
 	}
 
-	// Render very small HTML page
-	fmt.Fprintf(w, `<!doctype html>
-<html>
-<head>
-    <title>Blobcast – %s</title>
-    <style>
-        body {
-            font-family: monospace;
-            line-height: 1.6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 32px;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 16px;
-            margin-bottom: 24px;
-            border-bottom: 2px solid #ddd;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #111111;
-        }
-        .header-links {
-            display: flex;
-            gap: 20px;
-        }
-        .header-links a {
-            color: #0366d6;
-            text-decoration: none;
-        }
-        h3 {
-						margin: 0;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-        ul {
-						margin: 0;
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            padding: 8px 10px;
-						background-color: #fff;
-            border-bottom: 1px solid #ccc;
-            position: relative;
-        }
-        li:nth-child(odd) {
-            background-color:#eee;
-						border-bottom: 1px solid #ccc;
-        }
-        a {
-            color: #0366d6;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        .dir {
-            color: #0366d6;
-            font-weight: bold;
-        }
-        .file {
-            color: #24292e;
-        }
-        .parent-link {
-            margin: 16px 0;
-            padding: 8px 10px;
-        }
-        .size {
-            position: absolute;
-            right: 10px;
-            color: #888;
-            font-size: 0.9em;
-        }
-        .mime-type {
-            position: absolute;
-            right: 120px;
-            color: #666;
-            font-size: 0.9em;
-        }
-				.file-manifest-id {
-					position: absolute;
-					right: 260px;
-					color: #666;
-					font-size: 0.9em;
-				}
-    </style>
-</head>
-<body>`, html.EscapeString(manifestID))
-	// Format manifest ID to show first 10 and last 10 characters with ellipsis in between if too long
+	// Format manifest ID for display
 	displayID := manifestID
 	if len(manifestID) > 20 {
 		displayID = manifestID[:10] + "..." + manifestID[len(manifestID)-10:]
 	}
 
-	// Add page header
-	fmt.Fprintf(w, `<header>
-		<div class="logo">Blobcast</div>
-		<div class="header-links">
-			<a href="https://github.com/forma-dev/blobcast" target="_blank">GitHub</a>
-			<a href="https://github.com/forma-dev/blobcast/blob/main/README.md" target="_blank">Docs</a>
-		</div>
-	</header>`)
-
-	fmt.Fprintf(w, "<h3>/%s/%s</h3>", displayID, html.EscapeString(subPath))
-	if subPath != "" {
-		parent := subPath
-		if idx := strings.LastIndex(parent, "/"); idx >= 0 {
-			parent = parent[:idx]
-		} else {
-			parent = ""
-		}
-		fmt.Fprintf(w, `<div class="parent-link"><span class="icon">⬆️</span> <a href="/%s/%s">Parent Directory</a></div>`, manifestID, html.EscapeString(parent))
+	// Build template data
+	data := TemplateData{
+		Title:       "Blobcast – " + manifestID,
+		ManifestID:  manifestID,
+		DisplayID:   displayID,
+		SubPath:     subPath,
+		HasParent:   subPath != "",
+		Directories: make([]DirectoryItem, 0),
+		Files:       make([]FileItem, 0),
 	}
-	fmt.Fprintln(w, "<ul>")
+
+	// Calculate parent path if we have a subPath
+	if subPath != "" {
+		if idx := strings.LastIndex(subPath, "/"); idx >= 0 {
+			data.ParentPath = subPath[:idx]
+		} else {
+			data.ParentPath = ""
+		}
+	}
 
 	// Create separate slices for directories and files
 	var dirs, files []string
@@ -283,21 +189,20 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 	sort.Strings(dirs)
 	sort.Strings(files)
 
-	// Display directories first
+	// Build directories data
 	for _, name := range dirs {
-		esc := html.EscapeString(name)
-		next := name
+		path := name
 		if subPath != "" {
-			next = subPath + "/" + name
+			path = subPath + "/" + name
 		}
-
-		fmt.Fprintf(w, `<li><span class="dir">📁</span> <a href="/%s/%s">%s</a></li>`,
-			manifestID, html.EscapeString(next), esc)
+		data.Directories = append(data.Directories, DirectoryItem{
+			Name: name,
+			Path: path,
+		})
 	}
 
-	// Then display files
+	// Build files data
 	for _, name := range files {
-		esc := html.EscapeString(name)
 		filePath := name
 		if subPath != "" {
 			filePath = subPath + "/" + name
@@ -307,9 +212,9 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 		var fileSize string
 		var mimeType string
 		var fileManifestIdentifier *types.BlobIdentifier
+
 		for _, f := range dirManifest.Files {
 			if f.RelativePath == filePath || (subPath == "" && f.RelativePath == name) {
-				// Get the file manifest to determine size
 				fileManifestIdentifier = &types.BlobIdentifier{
 					Height:     f.Id.Height,
 					Commitment: f.Id.Commitment,
@@ -329,21 +234,25 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 			}
 		}
 
-		fileIcon := getFileIcon(name)
-		fmt.Fprintf(
-			w,
-			`<li><span class="file">%s</span> <a href="/%s/%s">%s</a> <span class="file-manifest-id"><a href="/%s">%s</a></span> <span class="mime-type">%s</span> <span class="size">%s</span></li>`,
-			fileIcon,
-			manifestID,
-			html.EscapeString(filePath),
-			esc,
-			fileManifestIdentifier.ID(),
-			fileManifestIdentifier.ID()[:10]+"..."+fileManifestIdentifier.ID()[len(fileManifestIdentifier.ID())-10:],
-			mimeType,
-			fileSize,
-		)
+		if fileManifestIdentifier != nil {
+			data.Files = append(data.Files, FileItem{
+				Name:         name,
+				Path:         filePath,
+				Icon:         getFileIcon(name),
+				Size:         fileSize,
+				MimeType:     mimeType,
+				ManifestID:   fileManifestIdentifier.ID(),
+				ManifestLink: fileManifestIdentifier.ID()[:10] + "..." + fileManifestIdentifier.ID()[len(fileManifestIdentifier.ID())-10:],
+			})
+		}
 	}
-	fmt.Fprintln(w, "</ul></body></html>")
+
+	// Render template instead of manual HTML generation
+	if err := RenderDirectory(w, data); err != nil {
+		slog.Error("Template rendering error", "error", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, storageClient pbStorageapisV1.StorageServiceClient, fileManifestIdentifier *types.BlobIdentifier) {

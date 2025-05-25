@@ -1,0 +1,31 @@
+{{- define "content" -}}
+<h3>/{{.DisplayID}}/{{.SubPath}}</h3>
+
+{{- if .HasParent -}}
+<div class="parent-link">
+    <span class="icon">⬆️</span> 
+    <a href="/{{.ManifestID}}/{{.ParentPath}}">Parent Directory</a>
+</div>
+{{- end -}}
+
+<ul>
+    {{- range .Directories -}}
+    <li>
+        <span class="dir">📁</span> 
+        <a href="/{{$.ManifestID}}/{{.Path}}">{{.Name}}</a>
+    </li>
+    {{- end -}}
+
+    {{- range .Files -}}
+    <li>
+        <span class="file">{{.Icon}}</span> 
+        <a href="/{{$.ManifestID}}/{{.Path}}">{{.Name}}</a>
+        <span class="file-manifest-id">
+            <a href="/{{.ManifestID}}">{{.ManifestLink}}</a>
+        </span>
+        <span class="mime-type">{{.MimeType}}</span>
+        <span class="size">{{.Size}}</span>
+    </li>
+    {{- end -}}
+</ul>
+{{- end -}}
