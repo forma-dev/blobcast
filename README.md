@@ -7,9 +7,13 @@ Blobcast is a minimal based rollup for publishing and retrieving files on top of
 
 * **Based Rollup** - ordering and finality come from Celestia headers; every Blobcast node derives identical state without a VM or separate consensus layer.
 * **Content addressable** - files are chunked, hashed and referenced through manifests. Every cryptographic hash is verified end-to-end.
-* **Self-hosted storage** - long-term availability of chunks/manifests is provided by Blobcast nodes.
+* **Deterministic state** - nodes sync Celestia blocks to derive identical blockchain state with cryptographic integrity guarantees.
 * **Simple state machine** - each Celestia block is projected into a `Block` that lists valid `Chunk`, `FileManifest`, and `DirectoryManifest` identifiers.  Merkle roots are committed to an on-disk Merkle-Mountain-Range (MMR).
 * **No smart-contract VM** - all state transition logic lives in Go code (see `pkg/sync/chain.go`).
+* **gRPC + REST APIs** - nodes expose both gRPC APIs and HTTP/JSON REST APIs for integration.
+* **Web gateway** - built-in HTTP server for browsing and serving files directly from manifests.
+
+> **⚠️ Beta Software**: Blobcast is currently experimental.
 
 ---
 

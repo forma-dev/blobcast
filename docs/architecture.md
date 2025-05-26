@@ -1,18 +1,21 @@
 # Architecture
 
-Blobcast is intentionally minimal. Everything a node needs to agree on is derived from two sources only:
+Blobcast is intentionally minimal. All chain state is derived from just two sources:
 
 1. **Celestia Headers** – provide ordering, data-availability proofs and finality.
-2. **Deterministic Go code** – the state‐transition functions found mostly in `pkg/sync/chain.go`.
+2. **Deterministic State Machine Code** – immutable, append-only state transitions _found mostly in [`pkg/sync/chain.go`](../pkg/sync/chain.go)._
 
-Because there is **no virtual-machine**, **no smart contracts** and **no fork-choice rule** outside of Celestia, any honest node will deterministically derive the same chain state when given the same Celestia header stream.
+Because there is **no virtual-machine**, any honest node will derive the same chain state when given the same Celestia header stream.
 
 ```mermaid
 flowchart TB
-  Uploader[User/Uploader] -->|submit tx| DA[Celestia]
-  BlobcastNode[Blobcast Node] -->|get blobs| DA
+  User -->|files submit| DA[Celestia]
+  User -->|files export| BlobcastNode
+  BlobcastNode[Blobcast Node] -->|sync blobs| DA
   BlobcastGateway[Blobcast Gateway] -->|grpc| BlobcastNode
-  User -->|request file/dir| BlobcastGateway
+  User -->|browse| BlobcastGateway
+  BlobcastAPI[Blobcast REST API] -->|grpc| BlobcastNode
+  ExternalApp[External Apps] -->|query| BlobcastAPI
 ```
 
 ## Transactions
@@ -127,8 +130,9 @@ All durable state is kept under `~/.blobcast/{network}/` using [Pebble](https://
 
 ## Networking surfaces
 
-1. **gRPC Storage API** – machine-friendly interface for querying manifests, files, and other state from a Blobcast node.
-2. **HTTP Explorer** – lightweight web UI (`blobcast serve`) for browsing directories and downloading files using the `BlobIdentifier`.
+1. **gRPC API** – machine-readable interface for querying manifests, files, and blockchain state.
+2. **Web Gateway** – lightweight web UI for browsing directories and downloading files using BlobIdentifiers.
+3. **REST API** – HTTP/JSON API for integration with external systems and applications.
 
 ## CLI interface
 
@@ -136,9 +140,10 @@ Blobcast ships with a single executable `blobcast` that groups several sub-comma
 
 | Command | Purpose |
 |---------|---------|
-| `start`    | Runs a full node: synchronises the chain and exposes the gRPC Storage API. |
-| `serve`    | Starts the read-only HTTP explorer on top of a running node. |
-| `upload`   | Publishes a file or directory: splits, (optionally) encrypts, uploads chunks and manifests. |
+| `node start`    | Runs a full node: synchronizes the chain and exposes the gRPC APIs. |
+| `gateway start` | Starts the web gateway for browsing directories and files. |
+| `api start`     | Starts the REST API server for HTTP/JSON integration. |
+| `files submit`  | Publishes a file or directory: splits, (optionally) encrypts, submits chunks and manifests. |
 
 ## Security properties
 
