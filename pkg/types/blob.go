@@ -45,6 +45,10 @@ func BlobIdentifierFromProto(proto *pbPrimitivesV1.BlobIdentifier) *BlobIdentifi
 }
 
 func BlobIdentifierFromBytes(b []byte) *BlobIdentifier {
+	if len(b) != 40 {
+		return &BlobIdentifier{}
+	}
+
 	return &BlobIdentifier{
 		Height:     util.Uint64FromBytes(b[:8]),
 		Commitment: crypto.Hash(b[8:]),

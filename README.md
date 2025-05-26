@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Blobcast is experimental beta software. Use at your own risk and do not rely on it for production workloads.
+
 # Blobcast
 
 Blobcast is a minimal based rollup for publishing and retrieving files on top of Celestia's data-availability (DA) layer.

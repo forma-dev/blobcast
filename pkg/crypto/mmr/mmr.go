@@ -81,8 +81,8 @@ func (mmr *MMR) Snapshot() Snapshot {
 	size := 8 + 8 + (numPeaks * 32) // numLeaves + numPeaks + peaks
 	buf := make([]byte, size)
 
-	binary.BigEndian.PutUint64(buf[0:8], mmr.numLeaves)
-	binary.BigEndian.PutUint64(buf[8:16], uint64(numPeaks))
+	binary.LittleEndian.PutUint64(buf[0:8], mmr.numLeaves)
+	binary.LittleEndian.PutUint64(buf[8:16], uint64(numPeaks))
 
 	offset := 16
 	for _, peak := range mmr.peaks {
@@ -98,8 +98,8 @@ func (mmr *MMR) Restore(snapshot Snapshot) error {
 		return fmt.Errorf("invalid snapshot: expected at least 16 bytes, got %d", len(snapshot))
 	}
 
-	numLeaves := binary.BigEndian.Uint64(snapshot[0:8])
-	numPeaks := binary.BigEndian.Uint64(snapshot[8:16])
+	numLeaves := binary.LittleEndian.Uint64(snapshot[0:8])
+	numPeaks := binary.LittleEndian.Uint64(snapshot[8:16])
 
 	expectedSize := 16 + (int(numPeaks) * 32)
 	if len(snapshot) != expectedSize {

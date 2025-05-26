@@ -13,7 +13,7 @@ import (
 // logic in CalculateMerkleRoot.
 func leafHash(idx int, data []byte) crypto.Hash {
 	var pref [8]byte
-	binary.BigEndian.PutUint64(pref[:], uint64(idx))
+	binary.LittleEndian.PutUint64(pref[:], uint64(idx))
 	return crypto.HashBytes(pref[:], data)
 }
 

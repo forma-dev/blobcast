@@ -21,7 +21,7 @@ func CalculateMerkleRoot(leaves [][]byte) crypto.Hash {
 	nodes := make([]*MerkleNode, len(leaves))
 	for i, leaf := range leaves {
 		var idx [8]byte
-		binary.BigEndian.PutUint64(idx[:], uint64(i))
+		binary.LittleEndian.PutUint64(idx[:], uint64(i))
 		nodes[i] = &MerkleNode{
 			Hash: crypto.HashBytes(idx[:], leaf),
 		}
