@@ -58,7 +58,7 @@ $ ./build/bin/blobcast files submit --dir ./my-data --verbose
 $ ./build/bin/blobcast files submit --file ./my-file.png --verbose
 
 # Browse files or directories via web gateway
-$ open http://localhost:8080/bc46nekbubvwcyg34in9p85rfbzd38p6tmg3ep9z9asn2jw5eaefznmzv5yyql
+$ open http://localhost:8080/bceo8mpf6ymoprq6wm50nflnar1s1nr39usuts850yyf1jgog5ux4iukcjwygrh
 $ open http://localhost:8080/bc46x9ik0c3ejr9psg8zkdu4rgmdajoul2298jdjecxoyywofrgwkzt4852ywm
 ```
 

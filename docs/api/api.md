@@ -71,5 +71,5 @@ curl http://localhost:8081/v1/blocks/123
 curl http://localhost:8081/v1/blocks/0x076692e52e2e607ac72aedb377fa494b55584c3145e8c1d4bd4a87675f281db5
 
 # Get file manifest
-curl http://localhost:8081/v1/manifests/file/bc46nekbubvwcyg34in9p85rfbzd38p6tmg3ep9z9asn2jw5eaefznmzv5yyql
+curl http://localhost:8081/v1/manifests/file/bceo8mpf6ymoprq6wm50nflnar1s1nr39usuts850yyf1jgog5ux4iukcjwygrh
 ```

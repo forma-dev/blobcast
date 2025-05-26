@@ -73,7 +73,7 @@ blobcast files submit --file ./my-file.png
 On success the command prints a **Blobcast URL**:
 
 ```
-blobcast://bc46nekbubvwcyg34in9p85rfbzd38p6tmg3ep9z9asn2jw5eaefznmzv5yyql
+blobcast://bceo8mpf6ymoprq6wm50nflnar1s1nr39usuts850yyf1jgog5ux4iukcjwygrh
 ```
 
 Keep this URL - it points to the manifest and is all you need to retrieve the data.
@@ -102,7 +102,7 @@ encrypted you must supply the same `--key` that was used during submission.
 Parses a Blobcast URL and prints the decoded height & share commitment.
 
 ```
-blobcast files identify --url blobcast://bc46nekbubvwcyg34in9p85rfbzd38p6tmg3ep9z9asn2jw5eaefznmzv5yyql
+blobcast files identify --url blobcast://bceo8mpf6ymoprq6wm50nflnar1s1nr39usuts850yyf1jgog5ux4iukcjwygrh
 ```
 
 | Flag | Description |
