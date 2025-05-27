@@ -10,7 +10,7 @@ const (
 
 	CelestiaNamespace = "626C6F62636173742D31" // blobcast-1
 
-	StartHeightMocha    = 6304513
-	StartHeightMammoth  = 775060
+	StartHeightMocha    = 6383285
+	StartHeightMammoth  = 1000000000 // mammoth TODO
 	StartHeightCelestia = 1000000000 // mainnet TODO
 )
