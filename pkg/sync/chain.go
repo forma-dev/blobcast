@@ -353,18 +353,22 @@ func (bc *BlobcastChain) SyncBlobs(
 			Commitment: crypto.Hash(blob.Commitment),
 		}
 
+		var accepted bool
 		var syncErr error
 		switch record := envelope.Payload.(type) {
 		case *pbRollupV1.BlobcastEnvelope_ChunkData:
-			if syncErr = bc.SyncChunk(ctx, tx, height, blob, record.ChunkData); syncErr == nil {
+			accepted, syncErr = bc.SyncChunk(ctx, tx, height, blob, record.ChunkData)
+			if syncErr == nil && accepted {
 				chunks = append(chunks, blobId)
 			}
 		case *pbRollupV1.BlobcastEnvelope_FileManifest:
-			if syncErr = bc.SyncFileManifest(ctx, tx, height, blob, record.FileManifest); syncErr == nil {
+			accepted, syncErr = bc.SyncFileManifest(ctx, tx, height, blob, record.FileManifest)
+			if syncErr == nil && accepted {
 				files = append(files, blobId)
 			}
 		case *pbRollupV1.BlobcastEnvelope_DirectoryManifest:
-			if syncErr = bc.SyncDirectoryManifest(ctx, tx, height, blob, record.DirectoryManifest); syncErr == nil {
+			accepted, syncErr = bc.SyncDirectoryManifest(ctx, tx, height, blob, record.DirectoryManifest)
+			if syncErr == nil && accepted {
 				dirs = append(dirs, blobId)
 			}
 		default:
@@ -384,13 +388,13 @@ func (bc *BlobcastChain) SyncChunk(
 	height uint64,
 	blob *blob.Blob,
 	chunkData *pbStorageV1.ChunkData,
-) error {
+) (bool, error) {
 	slog.Debug("syncing chunk",
 		"height", height,
 		"commitment", hex.EncodeToString(blob.Commitment),
 		"size", len(chunkData.ChunkData),
 	)
-	return tx.PutChunk(state.HashKey(blob.Commitment), chunkData.ChunkData)
+	return true, tx.PutChunk(state.HashKey(blob.Commitment), chunkData.ChunkData)
 }
 
 func (bc *BlobcastChain) SyncFileManifest(
@@ -399,7 +403,7 @@ func (bc *BlobcastChain) SyncFileManifest(
 	height uint64,
 	blob *blob.Blob,
 	fileManifest *pbStorageV1.FileManifest,
-) error {
+) (bool, error) {
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
 		Commitment: crypto.Hash(blob.Commitment),
@@ -422,7 +426,7 @@ func (bc *BlobcastChain) SyncFileManifest(
 	for _, chunk := range fileManifest.Chunks {
 		chunkData, exists, err := tx.GetChunk(state.HashKey(chunk.Id.Commitment))
 		if err != nil {
-			return fmt.Errorf("error getting chunk data: %v", err)
+			return false, fmt.Errorf("error getting chunk data: %v", err)
 		}
 		if !exists {
 			chunkId := types.BlobIdentifierFromProto(chunk.Id)
@@ -432,7 +436,7 @@ func (bc *BlobcastChain) SyncFileManifest(
 				"chunk_id", chunkId,
 				"commitment", hex.EncodeToString(chunk.Id.Commitment),
 			)
-			return nil
+			return false, nil
 		}
 
 		fileData = append(fileData, chunkData...)
@@ -445,7 +449,7 @@ func (bc *BlobcastChain) SyncFileManifest(
 			"expected_size", fileManifest.FileSize,
 			"actual_size", len(fileData),
 		)
-		return nil
+		return false, nil
 	}
 
 	// verify the file hash
@@ -456,10 +460,10 @@ func (bc *BlobcastChain) SyncFileManifest(
 			"expected_hash", hex.EncodeToString(fileManifest.FileHash),
 			"actual_hash", hex.EncodeToString(fileHash[:]),
 		)
-		return nil
+		return false, nil
 	}
 
-	return tx.PutFileManifest(manifestId, fileManifest)
+	return true, tx.PutFileManifest(manifestId, fileManifest)
 }
 
 func (bc *BlobcastChain) SyncDirectoryManifest(
@@ -468,7 +472,7 @@ func (bc *BlobcastChain) SyncDirectoryManifest(
 	height uint64,
 	blob *blob.Blob,
 	directoryManifest *pbStorageV1.DirectoryManifest,
-) error {
+) (bool, error) {
 	manifestId := &types.BlobIdentifier{
 		Height:     height,
 		Commitment: crypto.Hash(blob.Commitment),
@@ -492,7 +496,7 @@ func (bc *BlobcastChain) SyncDirectoryManifest(
 		fileId := types.BlobIdentifierFromProto(file.Id)
 		fileManifest, found, err := tx.GetFileManifest(fileId)
 		if err != nil {
-			return fmt.Errorf("error getting file manifest: %v", err)
+			return false, fmt.Errorf("error getting file manifest: %v", err)
 		}
 		if !found {
 			slog.Warn("directory manifest will not be included due to missing file manifest",
@@ -500,7 +504,7 @@ func (bc *BlobcastChain) SyncDirectoryManifest(
 				"file_id", fileId,
 				"commitment", hex.EncodeToString(file.Id.Commitment),
 			)
-			return nil
+			return false, nil
 		}
 
 		fileHash := crypto.HashBytes([]byte(file.RelativePath), fileManifest.FileHash)
@@ -515,8 +519,8 @@ func (bc *BlobcastChain) SyncDirectoryManifest(
 			"expected_hash", hex.EncodeToString(directoryManifest.DirectoryHash),
 			"actual_hash", hex.EncodeToString(dirMerkleRoot[:]),
 		)
-		return nil
+		return false, nil
 	}
 
-	return tx.PutDirectoryManifest(manifestId, directoryManifest)
+	return true, tx.PutDirectoryManifest(manifestId, directoryManifest)
 }
