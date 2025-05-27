@@ -2,31 +2,26 @@ package mmr
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/forma-dev/blobcast/pkg/crypto"
 )
 
-type Snapshot []byte
-
 type MMR struct {
-	peaks     []crypto.Hash
-	numLeaves uint64
+	peaks       []crypto.Hash
+	nodes       map[uint64]crypto.Hash
+	leafIndexes map[crypto.Hash]uint64
+	numLeaves   uint64
+	size        uint64
 }
 
 func NewMMR() *MMR {
 	return &MMR{
-		peaks:     []crypto.Hash{},
-		numLeaves: 0,
+		peaks:       []crypto.Hash{},
+		nodes:       make(map[uint64]crypto.Hash),
+		leafIndexes: make(map[crypto.Hash]uint64),
+		numLeaves:   0,
+		size:        0,
 	}
-}
-
-func NewMMRFromSnapshot(snapshot Snapshot) (*MMR, error) {
-	mmr := NewMMR()
-	if err := mmr.Restore(snapshot); err != nil {
-		return nil, err
-	}
-	return mmr, nil
 }
 
 func (mmr *MMR) NumLeaves() uint64 {
@@ -37,8 +32,31 @@ func (mmr *MMR) NumPeaks() uint64 {
 	return uint64(len(mmr.peaks))
 }
 
+func (mmr *MMR) Size() uint64 {
+	return mmr.size
+}
+
+func (mmr *MMR) Root() crypto.Hash {
+	if mmr.size == 0 {
+		return crypto.Hash{}
+	}
+	return mmr.bagPeaksWithSize(mmr.peaksLR(), mmr.size)
+}
+
 func (mmr *MMR) AddLeaf(leaf []byte) crypto.Hash {
-	carry := crypto.HashBytes(leaf)
+	leafHash := crypto.HashBytes(leaf)
+	leafIndex := mmr.numLeaves
+	leafPos := mmr.size
+	mmr.size++
+
+	leafPosHash := mmr.hashWithPosition(leafPos, leafHash.Bytes())
+
+	// Store the leaf node
+	mmr.nodes[leafPos] = leafPosHash
+	mmr.leafIndexes[leafHash] = leafIndex
+
+	// Use the original carry algorithm
+	carry := leafPosHash
 	height := uint64(0)
 
 	for {
@@ -52,8 +70,21 @@ func (mmr *MMR) AddLeaf(leaf []byte) crypto.Hash {
 			break
 		}
 
-		carry = crypto.HashBytes(mmr.peaks[height].Bytes(), carry.Bytes())
+		// Merge with existing peak
+		leftHash := mmr.peaks[height]
+		rightHash := carry
+
+		// Create parent node
+		parentPos := mmr.size
+		mmr.size++
+		parentHash := mmr.hashWithPosition(parentPos, leftHash.Bytes(), rightHash.Bytes())
+
+		// Store the parent node
+		mmr.nodes[parentPos] = parentHash
+
+		// Clear the peak and continue with the parent
 		mmr.peaks[height] = crypto.Hash{}
+		carry = parentHash
 		height++
 	}
 
@@ -61,9 +92,29 @@ func (mmr *MMR) AddLeaf(leaf []byte) crypto.Hash {
 	return mmr.Root()
 }
 
-func (mmr *MMR) Root() crypto.Hash {
+func (mmr *MMR) hashWithPosition(pos uint64, data ...[]byte) crypto.Hash {
+	posBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(posBytes, pos)
+	data = append([][]byte{posBytes}, data...)
+	return crypto.HashBytes(data...)
+}
+
+func (mmr *MMR) bagPeaksWithSize(peaks []crypto.Hash, size uint64) crypto.Hash {
+	peaksRoot := mmr.bagPeaks(peaks)
+	sizeBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(sizeBytes, size)
+	return crypto.HashBytes(sizeBytes, peaksRoot.Bytes())
+}
+
+// bagPeaks combines peaks to create the final root
+// peaks are bagged (folded) right to left
+func (mmr *MMR) bagPeaks(peaks []crypto.Hash) crypto.Hash {
+	revPeaks := make([]crypto.Hash, len(peaks))
+	for i, peak := range peaks {
+		revPeaks[len(peaks)-1-i] = peak
+	}
 	var accum crypto.Hash
-	for _, peak := range mmr.peaks {
+	for _, peak := range revPeaks {
 		if peak.IsZero() {
 			continue
 		}
@@ -76,44 +127,12 @@ func (mmr *MMR) Root() crypto.Hash {
 	return accum
 }
 
-func (mmr *MMR) Snapshot() Snapshot {
-	numPeaks := len(mmr.peaks)
-	size := 8 + 8 + (numPeaks * 32) // numLeaves + numPeaks + peaks
-	buf := make([]byte, size)
-
-	binary.LittleEndian.PutUint64(buf[0:8], mmr.numLeaves)
-	binary.LittleEndian.PutUint64(buf[8:16], uint64(numPeaks))
-
-	offset := 16
+func (mmr *MMR) peaksLR() []crypto.Hash {
+	peaks := make([]crypto.Hash, 0)
 	for _, peak := range mmr.peaks {
-		copy(buf[offset:offset+32], peak[:])
-		offset += 32
+		if !peak.IsZero() {
+			peaks = append([]crypto.Hash{peak}, peaks...)
+		}
 	}
-
-	return buf
-}
-
-func (mmr *MMR) Restore(snapshot Snapshot) error {
-	if len(snapshot) < 16 {
-		return fmt.Errorf("invalid snapshot: expected at least 16 bytes, got %d", len(snapshot))
-	}
-
-	numLeaves := binary.LittleEndian.Uint64(snapshot[0:8])
-	numPeaks := binary.LittleEndian.Uint64(snapshot[8:16])
-
-	expectedSize := 16 + (int(numPeaks) * 32)
-	if len(snapshot) != expectedSize {
-		return fmt.Errorf("invalid snapshot: expected %d bytes, got %d", expectedSize, len(snapshot))
-	}
-
-	mmr.numLeaves = numLeaves
-	mmr.peaks = make([]crypto.Hash, numPeaks)
-
-	offset := 16
-	for i := range mmr.peaks {
-		copy(mmr.peaks[i][:], snapshot[offset:offset+32])
-		offset += 32
-	}
-
-	return nil
+	return peaks
 }
