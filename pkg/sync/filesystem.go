@@ -3,7 +3,6 @@ package sync
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"os"
@@ -58,7 +57,7 @@ func (c *FileSystemClient) ExportFile(ctx context.Context, id *types.BlobIdentif
 
 		// check if file hash matches
 		if uint64(len(fileData)) == fileManifest.Manifest.FileSize {
-			fileHash := sha256.Sum256(fileData)
+			fileHash := crypto.HashBytes(fileData)
 			if bytes.Equal(fileHash[:], fileManifest.Manifest.FileHash) {
 				slog.Info("File already exists", "target_dir", targetDir, "file_name", fileName)
 				return nil
@@ -199,7 +198,7 @@ func (c *FileSystemClient) UploadDirectory(
 	}
 
 	// get directory state
-	dirKey := sha256.Sum256([]byte(source))
+	dirKey := state.UploadRecordKey(crypto.HashBytes([]byte(source)))
 	dirState, err := uploadState.GetUploadRecord(dirKey)
 	if err != nil {
 		return nil, crypto.Hash{}, fmt.Errorf("error getting directory state: %v", err)

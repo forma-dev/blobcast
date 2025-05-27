@@ -5,16 +5,19 @@ go 1.23.6
 toolchain go1.23.8
 
 require (
+	github.com/bdpiprava/scalar-go v0.12.0
 	github.com/celestiaorg/celestia-node v0.22.2
 	github.com/celestiaorg/go-square/v2 v2.2.0
 	github.com/cockroachdb/pebble v1.1.4
 	github.com/gabriel-vasile/mimetype v1.4.9
+	github.com/gorilla/mux v1.8.1
 	github.com/lmittmann/tint v1.0.7
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/spf13/cobra v1.9.1
 	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.6
+	lukechampine.com/blake3 v1.4.0
 )
 
 require (
@@ -35,7 +38,6 @@ require (
 	github.com/Workiva/go-datastructures v1.0.53 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
-	github.com/bdpiprava/scalar-go v0.12.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
@@ -137,7 +139,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grafana/otel-profiling-go v0.5.1 // indirect
 	github.com/grafana/pyroscope-go v1.1.2 // indirect
@@ -333,7 +334,6 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	lukechampine.com/blake3 v1.4.0 // indirect
 	nhooyr.io/websocket v1.8.17 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect

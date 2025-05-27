@@ -2,13 +2,13 @@ package celestia
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"sync/atomic"
 
 	"github.com/celestiaorg/celestia-node/blob"
 	"github.com/celestiaorg/celestia-node/header"
 	"github.com/celestiaorg/go-square/v2/share"
+	"github.com/forma-dev/blobcast/pkg/crypto"
 )
 
 type NoopDA struct {
@@ -29,7 +29,7 @@ func (d *NoopDA) Namespace() share.Namespace { return d.namespace }
 func (d *NoopDA) Cfg() DAConfig              { return d.cfg }
 
 func (d *NoopDA) fakeCommit(data []byte) []byte {
-	sum := sha256.Sum256(data)
+	sum := crypto.HashBytes(data)
 	return sum[:]
 }
 func (d *NoopDA) fakeHeight() uint64 {

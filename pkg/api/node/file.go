@@ -3,11 +3,11 @@ package node
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
 
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/types"
 )
 
@@ -45,7 +45,7 @@ func GetFileData(ctx context.Context, id *types.BlobIdentifier) ([]byte, error) 
 	}
 
 	// Verify the file hash
-	fileHash := sha256.Sum256(fileData)
+	fileHash := crypto.HashBytes(fileData)
 	slog.Debug("Verifying file hash", "expected_file_hash", hex.EncodeToString(fileManifest.FileHash), "computed_file_hash", hex.EncodeToString(fileHash[:]))
 
 	if !bytes.Equal(fileHash[:], fileManifest.FileHash) {

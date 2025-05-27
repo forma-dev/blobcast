@@ -2,8 +2,9 @@ package crypto
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/hex"
+
+	"lukechampine.com/blake3"
 )
 
 type Hash [32]byte
@@ -30,12 +31,12 @@ func (h Hash) IsZero() bool {
 
 func HashBytes(data ...[]byte) Hash {
 	if len(data) == 1 {
-		return sha256.Sum256(data[0])
+		return blake3.Sum256(data[0])
 	}
 
 	var combined []byte
 	for _, d := range data {
 		combined = append(combined, d...)
 	}
-	return sha256.Sum256(combined)
+	return blake3.Sum256(combined)
 }

@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -90,7 +89,7 @@ func PutFileData(
 	currentBatchIdx := 0
 	chunkHashes := make([][32]byte, len(chunks))
 	for i, chunk := range chunks {
-		chunkHashes[i] = sha256.Sum256(chunk)
+		chunkHashes[i] = crypto.HashBytes(chunk)
 		chunkState, err := uploadState.GetUploadRecord(chunkHashes[i])
 		if err != nil {
 			return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
@@ -145,7 +144,7 @@ func PutFileData(
 
 		// Add all chunks to the manifest
 		for i, chunk := range batch {
-			chunkHash := sha256.Sum256(chunk.ChunkData)
+			chunkHash := crypto.HashBytes(chunk.ChunkData)
 			commitment := commitments[i]
 
 			slog.Debug(
@@ -158,7 +157,7 @@ func PutFileData(
 				"commitment", hex.EncodeToString(commitment),
 			)
 
-			chunkState, err := uploadState.GetUploadRecord(chunkHash)
+			chunkState, err := uploadState.GetUploadRecord(state.UploadRecordKey(chunkHash))
 			if err != nil {
 				return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 			}
