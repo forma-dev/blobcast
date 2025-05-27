@@ -38,7 +38,7 @@ Every payload listed inside a block is referenced by a **BlobIdentifier**.  It i
 The pair is serialized and then base-36 encoded **with the prefix `bc`**.  This encoded string is what appears in Blobcast URLs:
 
 ```
-blobcast://bc48ktvz8ajakmwu2o6vkdhg4b5j1c3nveq11f0y29xkqe7hzdjmvsxdfdnco4
+blobcast://bchw4geg5w2xkeh7aciat4iikpevg0ihjnagj5j1yfppw4zex0vxj8sf4lswbllv
 ```
 
 ### ChunkData

@@ -295,7 +295,7 @@ components:
           example: 3606197
         file_hash:
           type: string
-          description: SHA256 hash of the file (hex encoded)
+          description: Blake3 hash of the file (hex encoded)
           example: "0xe88982ad2e61bc38a1ae7b726aff9dc29d876a18e0af294d67e9cf75d6235903"
         compression_algorithm:
           type: string
@@ -341,7 +341,7 @@ components:
         id:
           type: string
           description: File manifest blob identifier
-          example: bc4e6brni7xolr72qj2xxl0x46bbrpn1jo3o4xonovm6n2tn7j2lshfkfdxk3u
+          example: bchw4geg5w2xkeh7aciat4iikpevg0ihjnagj5j1yfppw4zex0vxj8sf4lswbllv
         relative_path:
           type: string
           description: Relative path of the file within the directory

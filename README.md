@@ -58,8 +58,8 @@ $ ./build/bin/blobcast files submit --dir ./my-data --verbose
 $ ./build/bin/blobcast files submit --file ./my-file.png --verbose
 
 # Browse files or directories via web gateway
-$ open http://localhost:8080/bceo8mpf6ymoprq6wm50nflnar1s1nr39usuts850yyf1jgog5ux4iukcjwygrh
-$ open http://localhost:8080/bc46x9ik0c3ejr9psg8zkdu4rgmdajoul2298jdjecxoyywofrgwkzt4852ywm
+$ open http://localhost:8080/bchw4geg5w2xkeh7aciat4iikpevg0ihjnagj5j1yfppw4zex0vxj8sf4lswbllv
+$ open http://localhost:8080/bckbg87lw3brjt5go3ig522yiy7udjbkofy6fhf6nuqpdz31n41389yn9rdgu1fo
 ```
 
 See `docs/cli.md` for a full command reference.
