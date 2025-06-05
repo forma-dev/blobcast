@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# GitHub workflows
+.github/
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.exe
+blobcast
+
+# Test files
+*_test.go
+testdata/
+
+# Development files
+.env
+.env.local
+docker-compose.yml
+docker-compose.*.yml
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
