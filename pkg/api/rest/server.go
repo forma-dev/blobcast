@@ -1,6 +1,7 @@
 package rest
 
 import (
+	_ "embed"
 	"net/http"
 
 	scalargo "github.com/bdpiprava/scalar-go"
@@ -26,6 +27,9 @@ func NewServer(storageClient pbStorageapisV1.StorageServiceClient, rollupClient 
 	return s
 }
 
+//go:embed openapi.yaml
+var openapiSpec []byte
+
 func (s *Server) setupRoutes() {
 	// Block endpoints
 	s.router.HandleFunc("/v1/blocks/latest", s.getLatestBlock).Methods("GET")
@@ -44,11 +48,16 @@ func (s *Server) setupRoutes() {
 	// Health check
 	s.router.HandleFunc("/v1/health", s.healthCheck).Methods("GET")
 
+	// OpenAPI spec
+	s.router.HandleFunc("/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.Write(openapiSpec)
+	}).Methods("GET")
+
 	// Api docs
 	s.router.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
-		content, err := scalargo.New(
-			"docs/api",
-			scalargo.WithBaseFileName("openapi.yaml"),
+		content, err := scalargo.NewV2(
+			scalargo.WithSpecURL("/openapi.yaml"),
 			scalargo.WithDarkMode(),
 		)
 
