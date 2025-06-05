@@ -29,7 +29,8 @@ func TestRetry(t *testing.T) {
 	t.Run("eventual success", func(t *testing.T) {
 		count := 0
 		config := DefaultRetryConfig()
-		config.InitialBackoff = 1 * time.Millisecond // Speed up test
+		config.InitialBackoff = 1 * time.Millisecond              // Speed up test
+		config.RetryableErrors = func(error) bool { return true } // All errors retryable for testing
 
 		err := Retry(context.Background(), config, func() error {
 			count++
@@ -53,7 +54,8 @@ func TestRetry(t *testing.T) {
 		count := 0
 		config := DefaultRetryConfig()
 		config.MaxAttempts = 3
-		config.InitialBackoff = 1 * time.Millisecond // Speed up test
+		config.InitialBackoff = 1 * time.Millisecond              // Speed up test
+		config.RetryableErrors = func(error) bool { return true } // All errors retryable for testing
 
 		err := Retry(context.Background(), config, func() error {
 			count++
@@ -145,7 +147,8 @@ func TestRetryWithResult(t *testing.T) {
 	t.Run("eventual success", func(t *testing.T) {
 		count := 0
 		config := DefaultRetryConfig()
-		config.InitialBackoff = 1 * time.Millisecond // Speed up test
+		config.InitialBackoff = 1 * time.Millisecond              // Speed up test
+		config.RetryableErrors = func(error) bool { return true } // All errors retryable for testing
 
 		result, err := RetryWithResult(context.Background(), config, func() (int, error) {
 			count++
