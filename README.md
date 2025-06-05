@@ -117,8 +117,7 @@ A Blobcast node exposes three services:
 Additional design & developer docs live in the `docs/` folder:
 
 * [`docs/architecture.md`](docs/architecture.md) - high-level architecture overview
-* [`docs/api/api.md`](docs/api/api.md) - REST API
-* [`docs/api/openapi.yaml`](docs/api/openapi.yaml) - REST API OpenAPI spec
+* [`docs/api.md`](docs/api.md) - REST API
 * [`docs/cli.md`](docs/cli.md) - detailed CLI reference
 
 ---
