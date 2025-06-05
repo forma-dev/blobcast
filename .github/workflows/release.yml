@@ -1,0 +1,88 @@
+name: Build Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            artifact_name: blobcast-linux-amd64
+          - goos: linux
+            goarch: arm64
+            artifact_name: blobcast-linux-arm64
+          - goos: darwin
+            goarch: amd64
+            artifact_name: blobcast-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            artifact_name: blobcast-darwin-arm64
+          - goos: windows
+            goarch: amd64
+            artifact_name: blobcast-windows-amd64.exe
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        go build -ldflags="-w -s" -o ${{ matrix.artifact_name }} .
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: ${{ matrix.artifact_name }}
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create checksums
+      run: |
+        for dir in blobcast-*; do
+          if [ -d "$dir" ]; then
+            cd "$dir"
+            sha256sum * > ../checksums-${dir#blobcast-}.txt
+            cd ..
+          fi
+        done
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          blobcast-*/blobcast-*
+          checksums-*.txt
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
