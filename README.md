@@ -1,3 +1,5 @@
+![Blobcast](docs/blobcast-banner.png)
+
 > [!IMPORTANT]
 > Blobcast is experimental beta software. Use at your own risk and do not rely on it for production workloads.
 
