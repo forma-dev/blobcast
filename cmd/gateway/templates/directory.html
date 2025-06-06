@@ -1,33 +1,178 @@
 {{template "base.html" .}}
 
 {{- define "content" -}}
-<h3>/{{.DisplayID}}/{{.SubPath}}</h3>
+<div class="relative bg-gradient-to-br from-amber-600 via-orange-600 to-red-600 rounded-xl shadow-2xl text-white p-10 mb-8 overflow-hidden">
+    <div class="absolute -top-8 right-16 opacity-10">
+        <svg class="w-80 h-80 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+        </svg>
+    </div>
+    <div class="relative flex items-center justify-between">
+        <div>
+            <h2 class="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-orange-100 to-white bg-clip-text text-transparent">
+                /{{.DisplayID}}/{{.SubPath}}
+            </h2>
+            <p class="text-amber-100 text-xl font-medium opacity-90">Browsing directory</p>
+        </div>
+        <div class="hidden lg:flex space-x-3">
+            <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
+                {{if eq (len .Directories) 1}}{{len .Directories}} Directory{{else}}{{len .Directories}} Directories{{end}}
+            </div>
+            <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
+                {{len .Files}} Files
+            </div>
+        </div>
+    </div>
+</div>
 
 {{- if .HasParent -}}
-<div class="parent-link">
-    <span class="icon">⬆️</span> 
-    <a href="/{{.ManifestID}}/{{.ParentPath}}">Parent Directory</a>
+<div class="mb-6">
+    <a href="/{{.ManifestID}}/{{.ParentPath}}" class="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl shadow-lg text-sm font-semibold text-gray-700 hover:text-orange-600 transition-all duration-200">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Parent Directory
+    </a>
 </div>
 {{- end -}}
 
-<ul>
-    {{- range .Directories -}}
-    <li>
-        <span class="dir">📁</span> 
-        <a href="/{{$.ManifestID}}/{{.Path}}">{{.Name}}</a>
-    </li>
+<div class="space-y-6">
+    {{- if .Directories -}}
+    <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900">Directories</h4>
+        </div>
+        <div class="bg-white divide-y divide-gray-100">
+            {{- range .Directories -}}
+            <div class="hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200">
+                <a href="/{{$.ManifestID}}/{{.Path}}" class="px-6 py-4 flex items-center text-orange-600 hover:text-orange-800 font-semibold hover:underline transition-colors transition-all duration-200">
+                    <div class="mr-4 h-8 w-8 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md">
+                        <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                    </div>
+                    <span class="text-sm">{{.Name}}</span>
+                </a>
+            </div>
+            {{- end -}}
+        </div>
+    </div>
     {{- end -}}
 
-    {{- range .Files -}}
-    <li>
-        <span class="file">{{.Icon}}</span> 
-        <a href="/{{$.ManifestID}}/{{.Path}}">{{.Name}}</a>
-        <span class="file-manifest-id">
-            <a href="/{{.ManifestID}}">{{.ManifestLink}}</a>
-        </span>
-        <span class="mime-type">{{.MimeType}}</span>
-        <span class="size">{{.Size}}</span>
-    </li>
+    {{- if .Files -}}
+    <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900">Files ({{len .Files}})</h4>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gradient-to-r from-gray-50 via-gray-100 to-gray-50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">File Name</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">MIME Type</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Size</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Manifest ID</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    {{range .Files}}
+                    <tr class="hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50 transition-all duration-200">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8">
+                                    {{- if or (eq .MimeType "image/jpeg") (eq .MimeType "image/png") (eq .MimeType "image/gif") (eq .MimeType "image/webp") (eq .MimeType "image/svg+xml") -}}
+                                    <!-- Image Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if or (eq .MimeType "video/mp4") (eq .MimeType "video/webm") (eq .MimeType "video/ogg") (eq .MimeType "video/avi") (eq .MimeType "video/mov") -}}
+                                    <!-- Video Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if or (eq .MimeType "audio/mp3") (eq .MimeType "audio/wav") (eq .MimeType "audio/ogg") (eq .MimeType "audio/mpeg") (eq .MimeType "audio/flac") -}}
+                                    <!-- Audio Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if eq .MimeType "application/pdf" -}}
+                                    <!-- PDF Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if or (eq .MimeType "application/zip") (eq .MimeType "application/x-rar") (eq .MimeType "application/x-tar") (eq .MimeType "application/gzip") -}}
+                                    <!-- Archive Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if or (eq .MimeType "text/javascript") (eq .MimeType "application/javascript") (eq .MimeType "text/css") (eq .MimeType "text/html") (eq .MimeType "application/json") -}}
+                                    <!-- Code Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if or (eq .MimeType "text/plain") (eq .MimeType "text/markdown") (eq .MimeType "application/msword") (eq .MimeType "application/vnd.openxmlformats-officedocument.wordprocessingml.document") -}}
+                                    <!-- Document Text Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else if or (eq .MimeType "application/vnd.ms-excel") (eq .MimeType "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") (eq .MimeType "text/csv") -}}
+                                    <!-- Spreadsheet Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625v1.5c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-12.75c0-.621-.504-1.125-1.125-1.125m0 12.75h-7.5c-.621 0-1.125.504-1.125 1.125m9.75-12.75H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                        </svg>
+                                    </div>
+                                    {{- else -}}
+                                    <!-- Default File Icon -->
+                                    <div class="h-8 w-8 rounded-lg bg-primary-100 flex items-center justify-center">
+                                        <svg class="h-4 w-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </div>
+                                    {{- end -}}
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        <a href="/{{$.ManifestID}}/{{.Path}}" class="text-primary-600 hover:text-primary-900">
+                                            {{.Name}}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300">
+                                {{.MimeType}}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                            {{.Size}}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                            <a href="/{{.ManifestID}}" class="inline-flex items-center px-3 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono font-bold text-gray-600 hover:text-green-600 transition-all duration-200 shadow-sm">
+                                {{.ManifestLink}}
+                            </a>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
     {{- end -}}
-</ul>
+</div>
 {{- end -}}

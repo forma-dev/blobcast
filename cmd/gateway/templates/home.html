@@ -1,6 +1,60 @@
 {{template "base.html" .}}
 
 {{- define "content" -}}
-<h3>Blobcast Explorer</h3>
-<p>Visit <code>/&lt;manifest_id&gt;</code> to browse a manifest</p>
+<div class="relative bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 rounded-3xl shadow-2xl text-white p-12 mb-12 overflow-hidden">
+    <div class="relative text-center">
+        <h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+            Welcome to Blobcast Gateway
+        </h2>
+        <div class="mt-10 max-w-2xl mx-auto">
+            <p class="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-xl font-medium">Access files and directories on the blobcast storage network</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Start Section -->
+<div class="grid grid-cols-1 gap-8 mb-8">
+    <div class="relative">
+        <div class="flex items-center mb-6">
+            <div class="w-12 h-12 flex items-center justify-center mr-4">
+                <svg class="w-12 h-12 text-indigo-600" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+                </svg>
+            </div>
+            <h3 class="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                Quick Start Guide
+            </h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20 shadow-lg">
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                    <div class="w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center mr-2">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                    </div>
+                    Browse a Manifest
+                </h4>
+                <p class="text-gray-600 text-sm mb-3 font-medium">Access files by visiting:</p>
+                <code class="block bg-gray-100 text-gray-800 p-3 rounded-lg text-sm font-mono border border-gray-200">
+                    /<span class="text-emerald-600 font-bold">&lt;manifest_id&gt;</span>
+                </code>
+            </div>
+            <div class="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20 shadow-lg">
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                    <div class="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center mr-2">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    Direct File Access
+                </h4>
+                <p class="text-gray-600 text-sm mb-3 font-medium">Access specific files:</p>
+                <code class="block bg-gray-100 text-gray-800 p-3 rounded-lg text-sm font-mono border border-gray-200">
+                    /<span class="text-emerald-600 font-bold">&lt;manifest_id&gt;</span>/<span class="text-blue-600 font-bold">&lt;file_path&gt;</span>
+                </code>
+            </div>
+        </div>
+    </div>
+</div>
 {{- end -}}
