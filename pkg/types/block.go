@@ -1,6 +1,7 @@
 package types
 
 import (
+	"sync"
 	"time"
 
 	"github.com/forma-dev/blobcast/pkg/crypto"
@@ -35,7 +36,10 @@ type BlockBody struct {
 	Chunks []*BlobIdentifier
 }
 
-var blockHeaderHashCache = make(map[uint64]crypto.Hash)
+var (
+	blockHeaderHashCache = make(map[uint64]crypto.Hash)
+	blockHeaderHashMutex sync.RWMutex
+)
 
 func NewBlockFromHeader(header *BlockHeader, dirs []*BlobIdentifier, files []*BlobIdentifier, chunks []*BlobIdentifier) *Block {
 	block := &Block{
@@ -62,12 +66,19 @@ func NewBlock(dirs []*BlobIdentifier, files []*BlobIdentifier, chunks []*BlobIde
 }
 
 func (bh *BlockHeader) Hash() crypto.Hash {
+	blockHeaderHashMutex.RLock()
 	if hash, ok := blockHeaderHashCache[bh.Height]; ok {
+		blockHeaderHashMutex.RUnlock()
 		return hash
 	}
+	blockHeaderHashMutex.RUnlock()
 
 	hash := crypto.HashBytes(bh.Bytes())
+
+	blockHeaderHashMutex.Lock()
 	blockHeaderHashCache[bh.Height] = hash
+	blockHeaderHashMutex.Unlock()
+
 	return hash
 }
 
