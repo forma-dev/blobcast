@@ -18,7 +18,7 @@ Thumbs.db
 build/
 dist/
 *.exe
-blobcast
+/blobcast
 
 # Test data files
 test-*
