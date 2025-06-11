@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package blobcast.syncapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/syncapis/v1";
+
+import "google/api/field_behavior.proto";
+
+message StreamBlocksRequest {
+  uint64 start_height = 1 [(google.api.field_behavior) = REQUIRED];
+  uint64 end_height = 2 [(google.api.field_behavior) = REQUIRED];
+  uint32 batch_size = 3;
+}

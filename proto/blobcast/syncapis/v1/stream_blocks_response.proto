@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package blobcast.syncapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/syncapis/v1";
+
+import "blobcast/rollup/v1/block.proto";
+import "blobcast/storage/v1/file_manifest.proto";
+import "blobcast/storage/v1/directory_manifest.proto";
+import "blobcast/syncapis/v1/chunk_with_hash.proto";
+
+message StreamBlocksResponse {
+  blobcast.rollup.v1.Block block = 1;
+  repeated ChunkWithHash chunks = 2;
+  repeated blobcast.storage.v1.FileManifest files = 3;
+  repeated blobcast.storage.v1.DirectoryManifest dirs = 4;
+  bytes mmr_snapshot = 5;
+}

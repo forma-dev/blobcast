@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/cockroachdb/pebble"
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/crypto/mmr"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"github.com/forma-dev/blobcast/pkg/util"
@@ -18,6 +19,7 @@ type ChainStateTransaction struct {
 	state *ChainState
 
 	pendingChunks        map[HashKey][]byte
+	pendingChunkHashes   map[HashKey]crypto.Hash
 	pendingFileManifests map[*types.BlobIdentifier]*pbStorageV1.FileManifest
 
 	mutex     sync.Mutex
@@ -30,6 +32,7 @@ func NewChainStateTransaction(state *ChainState) *ChainStateTransaction {
 		state:                state,
 		batch:                state.db.NewBatch(),
 		pendingChunks:        make(map[HashKey][]byte),
+		pendingChunkHashes:   make(map[HashKey]crypto.Hash),
 		pendingFileManifests: make(map[*types.BlobIdentifier]*pbStorageV1.FileManifest),
 	}
 }
@@ -47,6 +50,15 @@ func (tx *ChainStateTransaction) PutStateMMR(height uint64, mmr *mmr.MMR) error 
 	return tx.batch.Set(key, mmr.Snapshot(), nil)
 }
 
+func (tx *ChainStateTransaction) PutStateMMRRaw(height uint64, raw []byte) error {
+	if height == 0 {
+		return nil
+	}
+
+	key := prefixHeightKey(height, tx.state.stateMMRPrefix)
+	return tx.batch.Set(key, raw, nil)
+}
+
 func (tx *ChainStateTransaction) PutBlock(height uint64, block *types.Block) error {
 	key := prefixHeightKey(height, tx.state.blockPrefix)
 	if err := tx.batch.Set(key, block.Bytes(), nil); err != nil {
@@ -58,9 +70,19 @@ func (tx *ChainStateTransaction) PutBlock(height uint64, block *types.Block) err
 	return tx.batch.Set(hashKey, util.BytesFromUint64(height), nil)
 }
 
-func (tx *ChainStateTransaction) PutChunk(key HashKey, value []byte) error {
+func (tx *ChainStateTransaction) PutChunk(key HashKey, value []byte, hash crypto.Hash) error {
+	if err := tx.batch.Set(prefixKey(key[:], tx.state.chunkPrefix), value, nil); err != nil {
+		return err
+	}
+
 	tx.pendingChunks[key] = value
-	return tx.batch.Set(prefixKey(key[:], tx.state.chunkPrefix), value, nil)
+
+	if err := tx.batch.Set(prefixKey(key[:], tx.state.chunkHashPrefix), hash.Bytes(), nil); err != nil {
+		return err
+	}
+
+	tx.pendingChunkHashes[key] = hash
+	return nil
 }
 
 func (tx *ChainStateTransaction) GetChunk(key HashKey) ([]byte, bool, error) {
@@ -69,6 +91,14 @@ func (tx *ChainStateTransaction) GetChunk(key HashKey) ([]byte, bool, error) {
 		return value, true, nil
 	}
 	return tx.state.GetChunk(key)
+}
+
+func (tx *ChainStateTransaction) GetChunkHash(key HashKey) (crypto.Hash, bool, error) {
+	hash, exists := tx.pendingChunkHashes[key]
+	if exists {
+		return hash, true, nil
+	}
+	return tx.state.GetChunkHash(key)
 }
 
 func (tx *ChainStateTransaction) PutFileManifest(id *types.BlobIdentifier, manifest *pbStorageV1.FileManifest) error {
@@ -117,6 +147,7 @@ func (tx *ChainStateTransaction) commit() error {
 	}
 
 	tx.pendingChunks = nil
+	tx.pendingChunkHashes = nil
 	tx.pendingFileManifests = nil
 	tx.committed = true
 	tx.state.pendingTransaction = nil
@@ -134,6 +165,7 @@ func (tx *ChainStateTransaction) abort() error {
 		return fmt.Errorf("transaction already finished")
 	}
 	tx.pendingChunks = nil
+	tx.pendingChunkHashes = nil
 	tx.pendingFileManifests = nil
 	tx.aborted = true
 	tx.batch.Close()

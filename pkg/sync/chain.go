@@ -267,29 +267,29 @@ func (bc *BlobcastChain) ApplyBlock(ctx context.Context, tx *state.ChainStateTra
 		}
 
 		block.Header.ParentHash = prevBlock.Hash()
-	}
 
-	// update state root
-	stateMMR, err := bc.chainState.GetStateMMR(block.Height() - 1)
-	if err != nil {
-		return fmt.Errorf("error getting state mmr: %v", err)
-	}
+		// update state root
+		stateMMR, err := bc.chainState.GetStateMMR(block.Height() - 1)
+		if err != nil {
+			return fmt.Errorf("error getting state mmr: %v", err)
+		}
 
-	// add the dirs, files, and chunks merkle roots to the state root, if they exist
-	if !block.Header.DirsRoot.IsZero() {
-		stateMMR.AddLeaf(block.Header.DirsRoot.Bytes())
-	}
-	if !block.Header.FilesRoot.IsZero() {
-		stateMMR.AddLeaf(block.Header.FilesRoot.Bytes())
-	}
-	if !block.Header.ChunksRoot.IsZero() {
-		stateMMR.AddLeaf(block.Header.ChunksRoot.Bytes())
-	}
+		// add the dirs, files, and chunks merkle roots to the state root, if they exist
+		if !block.Header.DirsRoot.IsZero() {
+			stateMMR.AddLeaf(block.Header.DirsRoot.Bytes())
+		}
+		if !block.Header.FilesRoot.IsZero() {
+			stateMMR.AddLeaf(block.Header.FilesRoot.Bytes())
+		}
+		if !block.Header.ChunksRoot.IsZero() {
+			stateMMR.AddLeaf(block.Header.ChunksRoot.Bytes())
+		}
 
-	block.Header.StateRoot = stateMMR.Root()
+		block.Header.StateRoot = stateMMR.Root()
 
-	if err := tx.PutStateMMR(block.Height(), stateMMR); err != nil {
-		return fmt.Errorf("error putting state mmr: %v", err)
+		if err := tx.PutStateMMR(block.Height(), stateMMR); err != nil {
+			return fmt.Errorf("error putting state mmr: %v", err)
+		}
 	}
 
 	slog.Debug("block header",
@@ -394,7 +394,7 @@ func (bc *BlobcastChain) SyncChunk(
 		"commitment", hex.EncodeToString(blob.Commitment),
 		"size", len(chunkData.ChunkData),
 	)
-	return true, tx.PutChunk(state.HashKey(blob.Commitment), chunkData.ChunkData)
+	return true, tx.PutChunk(state.HashKey(blob.Commitment), chunkData.ChunkData, crypto.HashBytes(chunkData.ChunkData))
 }
 
 func (bc *BlobcastChain) SyncFileManifest(
@@ -422,19 +422,45 @@ func (bc *BlobcastChain) SyncFileManifest(
 	// verify the file hash
 	fileData := []byte{}
 
-	// all chunks for this file manifest must be seen
+	// all chunks for this file manifest must be seen & verified
 	for _, chunk := range fileManifest.Chunks {
-		chunkData, exists, err := tx.GetChunk(state.HashKey(chunk.Id.Commitment))
+		chunkData, chunkExists, err := tx.GetChunk(state.HashKey(chunk.Id.Commitment))
 		if err != nil {
 			return false, fmt.Errorf("error getting chunk data: %v", err)
 		}
-		if !exists {
-			chunkId := types.BlobIdentifierFromProto(chunk.Id)
+
+		chunkId := types.BlobIdentifierFromProto(chunk.Id)
+
+		if !chunkExists {
 			slog.Warn(
 				"file manifest will not be inlcuded due to missing chunk",
 				"file_id", manifestId,
 				"chunk_id", chunkId,
 				"commitment", hex.EncodeToString(chunk.Id.Commitment),
+			)
+			return false, nil
+		}
+
+		chunkHash, chunkHashExists, err := tx.GetChunkHash(state.HashKey(chunk.Id.Commitment))
+		if err != nil {
+			return false, fmt.Errorf("error getting chunk hash: %v", err)
+		}
+
+		if !chunkHashExists {
+			slog.Warn("file manifest will not be inlcuded due to missing chunk hash",
+				"file_id", manifestId,
+				"chunk_id", chunkId,
+				"commitment", hex.EncodeToString(chunk.Id.Commitment),
+			)
+			return false, nil
+		}
+
+		if !chunkHash.EqualBytes(chunk.ChunkHash) {
+			slog.Warn("file manifest will not be inlcuded due to chunk hash mismatch",
+				"file_id", manifestId,
+				"chunk_id", chunkId,
+				"expected_hash", hex.EncodeToString(chunk.ChunkHash),
+				"actual_hash", hex.EncodeToString(chunkHash[:]),
 			)
 			return false, nil
 		}

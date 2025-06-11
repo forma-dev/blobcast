@@ -82,6 +82,12 @@ func (bh *BlockHeader) Hash() crypto.Hash {
 	return hash
 }
 
+func (bh *BlockHeader) UpdateHashCache(hash crypto.Hash) {
+	blockHeaderHashMutex.Lock()
+	blockHeaderHashCache[bh.Height] = hash
+	blockHeaderHashMutex.Unlock()
+}
+
 func (b *Block) Hash() crypto.Hash {
 	return b.Header.Hash()
 }

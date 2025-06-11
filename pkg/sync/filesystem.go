@@ -43,7 +43,7 @@ func (c *FileSystemClient) ExportFile(ctx context.Context, id *types.BlobIdentif
 	// check if file already exists
 	if storage.Exists(target) {
 		fileManifest, err := c.storageClient.GetFileManifest(ctx, &pbStorageapisV1.GetFileManifestRequest{
-			Id: id.Proto(),
+			Id: id.ID(),
 		})
 		if err != nil {
 			return fmt.Errorf("error getting file manifest: %v", err)
@@ -67,7 +67,7 @@ func (c *FileSystemClient) ExportFile(ctx context.Context, id *types.BlobIdentif
 
 	// get file data
 	fileDataResp, err := c.storageClient.GetFileData(ctx, &pbStorageapisV1.GetFileDataRequest{
-		Id: id.Proto(),
+		Id: id.ID(),
 	})
 	if err != nil {
 		return fmt.Errorf("error getting file data: %v", err)
@@ -122,7 +122,7 @@ func (c *FileSystemClient) ExportDirectory(ctx context.Context, id *types.BlobId
 	}
 
 	directoryManifest, err := c.storageClient.GetDirectoryManifest(ctx, &pbStorageapisV1.GetDirectoryManifestRequest{
-		Id: id.Proto(),
+		Id: id.ID(),
 	})
 	if err != nil {
 		return fmt.Errorf("error getting directory manifest: %v", err)

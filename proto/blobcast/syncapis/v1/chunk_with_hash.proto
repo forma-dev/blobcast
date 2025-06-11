@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package blobcast.syncapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/syncapis/v1";
+
+message ChunkWithHash {
+  bytes chunk_data = 1;
+  bytes chunk_hash = 2;
+}

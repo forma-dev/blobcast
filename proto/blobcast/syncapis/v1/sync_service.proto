@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package blobcast.syncapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/syncapis/v1";
+
+import "blobcast/syncapis/v1/stream_blocks_request.proto";
+import "blobcast/syncapis/v1/stream_blocks_response.proto";
+
+service SyncService {
+  rpc StreamBlocks(StreamBlocksRequest) returns (stream StreamBlocksResponse);
+}

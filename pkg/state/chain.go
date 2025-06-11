@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/cockroachdb/pebble"
+	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/crypto/mmr"
 	"github.com/forma-dev/blobcast/pkg/types"
 	"github.com/forma-dev/blobcast/pkg/util"
@@ -34,6 +35,7 @@ type ChainState struct {
 	blockHashPrefix    []byte
 	stateMMRPrefix     []byte
 	chunkPrefix        []byte
+	chunkHashPrefix    []byte
 	fileManifestPrefix []byte
 	dirManifestPrefix  []byte
 }
@@ -73,6 +75,7 @@ func openChainState() (*ChainState, error) {
 		blockHashPrefix:    []byte("blk:h:"),
 		stateMMRPrefix:     []byte("mmr:"),
 		chunkPrefix:        []byte("chk:"),
+		chunkHashPrefix:    []byte("chk:h:"),
 		fileManifestPrefix: []byte("man:f:"),
 		dirManifestPrefix:  []byte("man:d:"),
 	}, nil
@@ -198,6 +201,19 @@ func (s *ChainState) GetChunk(key HashKey) ([]byte, bool, error) {
 	copy(safeValue, value)
 
 	return safeValue, true, nil
+}
+
+func (s *ChainState) GetChunkHash(key HashKey) (crypto.Hash, bool, error) {
+	hash, closer, err := s.db.Get(prefixKey(key[:], s.chunkHashPrefix))
+	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return crypto.Hash{}, false, nil
+		}
+		return crypto.Hash{}, false, err
+	}
+	defer closer.Close()
+
+	return crypto.Hash(hash), true, nil
 }
 
 func (s *ChainState) GetDirectoryManifest(id *types.BlobIdentifier) (*pbStorageV1.DirectoryManifest, bool, error) {
