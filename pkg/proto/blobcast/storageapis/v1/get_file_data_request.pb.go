@@ -7,7 +7,6 @@
 package v1
 
 import (
-	v1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -25,7 +24,7 @@ const (
 
 type GetFileDataRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *v1.BlobIdentifier     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -60,20 +59,20 @@ func (*GetFileDataRequest) Descriptor() ([]byte, []int) {
 	return file_blobcast_storageapis_v1_get_file_data_request_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetFileDataRequest) GetId() *v1.BlobIdentifier {
+func (x *GetFileDataRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return nil
+	return ""
 }
 
 var File_blobcast_storageapis_v1_get_file_data_request_proto protoreflect.FileDescriptor
 
 const file_blobcast_storageapis_v1_get_file_data_request_proto_rawDesc = "" +
 	"\n" +
-	"3blobcast/storageapis/v1/get_file_data_request.proto\x12\x17blobcast.storageapis.v1\x1a,blobcast/primitives/v1/blob_identifier.proto\x1a\x1fgoogle/api/field_behavior.proto\"Q\n" +
-	"\x12GetFileDataRequest\x12;\n" +
-	"\x02id\x18\x01 \x01(\v2&.blobcast.primitives.v1.BlobIdentifierB\x03\xe0A\x02R\x02idBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
+	"3blobcast/storageapis/v1/get_file_data_request.proto\x12\x17blobcast.storageapis.v1\x1a\x1fgoogle/api/field_behavior.proto\")\n" +
+	"\x12GetFileDataRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02idBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
 
 var (
 	file_blobcast_storageapis_v1_get_file_data_request_proto_rawDescOnce sync.Once
@@ -90,15 +89,13 @@ func file_blobcast_storageapis_v1_get_file_data_request_proto_rawDescGZIP() []by
 var file_blobcast_storageapis_v1_get_file_data_request_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_blobcast_storageapis_v1_get_file_data_request_proto_goTypes = []any{
 	(*GetFileDataRequest)(nil), // 0: blobcast.storageapis.v1.GetFileDataRequest
-	(*v1.BlobIdentifier)(nil),  // 1: blobcast.primitives.v1.BlobIdentifier
 }
 var file_blobcast_storageapis_v1_get_file_data_request_proto_depIdxs = []int32{
-	1, // 0: blobcast.storageapis.v1.GetFileDataRequest.id:type_name -> blobcast.primitives.v1.BlobIdentifier
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_blobcast_storageapis_v1_get_file_data_request_proto_init() }

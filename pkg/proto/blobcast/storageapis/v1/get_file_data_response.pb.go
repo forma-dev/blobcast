@@ -7,7 +7,6 @@
 package v1
 
 import (
-	v1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -24,8 +23,7 @@ const (
 
 type GetFileDataResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *v1.BlobIdentifier     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -60,13 +58,6 @@ func (*GetFileDataResponse) Descriptor() ([]byte, []int) {
 	return file_blobcast_storageapis_v1_get_file_data_response_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetFileDataResponse) GetId() *v1.BlobIdentifier {
-	if x != nil {
-		return x.Id
-	}
-	return nil
-}
-
 func (x *GetFileDataResponse) GetData() []byte {
 	if x != nil {
 		return x.Data
@@ -78,10 +69,9 @@ var File_blobcast_storageapis_v1_get_file_data_response_proto protoreflect.FileD
 
 const file_blobcast_storageapis_v1_get_file_data_response_proto_rawDesc = "" +
 	"\n" +
-	"4blobcast/storageapis/v1/get_file_data_response.proto\x12\x17blobcast.storageapis.v1\x1a,blobcast/primitives/v1/blob_identifier.proto\"a\n" +
-	"\x13GetFileDataResponse\x126\n" +
-	"\x02id\x18\x01 \x01(\v2&.blobcast.primitives.v1.BlobIdentifierR\x02id\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04dataBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
+	"4blobcast/storageapis/v1/get_file_data_response.proto\x12\x17blobcast.storageapis.v1\")\n" +
+	"\x13GetFileDataResponse\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04dataBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
 
 var (
 	file_blobcast_storageapis_v1_get_file_data_response_proto_rawDescOnce sync.Once
@@ -98,15 +88,13 @@ func file_blobcast_storageapis_v1_get_file_data_response_proto_rawDescGZIP() []b
 var file_blobcast_storageapis_v1_get_file_data_response_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_blobcast_storageapis_v1_get_file_data_response_proto_goTypes = []any{
 	(*GetFileDataResponse)(nil), // 0: blobcast.storageapis.v1.GetFileDataResponse
-	(*v1.BlobIdentifier)(nil),   // 1: blobcast.primitives.v1.BlobIdentifier
 }
 var file_blobcast_storageapis_v1_get_file_data_response_proto_depIdxs = []int32{
-	1, // 0: blobcast.storageapis.v1.GetFileDataResponse.id:type_name -> blobcast.primitives.v1.BlobIdentifier
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_blobcast_storageapis_v1_get_file_data_response_proto_init() }

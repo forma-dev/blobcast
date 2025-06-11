@@ -9,6 +9,7 @@ import (
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/grpc/rollup"
 	"github.com/forma-dev/blobcast/pkg/grpc/storage"
+	grpcSync "github.com/forma-dev/blobcast/pkg/grpc/sync"
 	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/forma-dev/blobcast/pkg/sync"
 	"github.com/spf13/cobra"
@@ -16,6 +17,7 @@ import (
 
 	pbRollupapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1"
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
+	pbSyncapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/syncapis/v1"
 )
 
 var (
@@ -67,14 +69,16 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	slog.Info("Starting gRPC server", "address", flagGRPCAddress, "port", flagGRPCPort)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", flagGRPCAddress, flagGRPCPort))
+	grpcAddr := fmt.Sprintf("%s:%s", flagGRPCAddress, flagGRPCPort)
+	listener, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-		return fmt.Errorf("error listening on %s:%s: %v", flagGRPCAddress, flagGRPCPort, err)
+		return fmt.Errorf("error listening on %s: %v", grpcAddr, err)
 	}
 
 	grpcServer := grpc.NewServer()
 	pbStorageapisV1.RegisterStorageServiceServer(grpcServer, storage.NewStorageServiceServer())
 	pbRollupapisV1.RegisterRollupServiceServer(grpcServer, rollup.NewRollupServiceServer(chainState))
+	pbSyncapisV1.RegisterSyncServiceServer(grpcServer, grpcSync.NewSyncServiceServer(chainState))
 
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {

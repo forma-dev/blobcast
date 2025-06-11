@@ -25,29 +25,39 @@ var File_blobcast_storageapis_v1_storage_service_proto protoreflect.FileDescript
 
 const file_blobcast_storageapis_v1_storage_service_proto_rawDesc = "" +
 	"\n" +
-	"-blobcast/storageapis/v1/storage_service.proto\x12\x17blobcast.storageapis.v1\x1a<blobcast/storageapis/v1/get_directory_manifest_request.proto\x1a=blobcast/storageapis/v1/get_directory_manifest_response.proto\x1a7blobcast/storageapis/v1/get_file_manifest_request.proto\x1a8blobcast/storageapis/v1/get_file_manifest_response.proto\x1a3blobcast/storageapis/v1/get_file_data_request.proto\x1a4blobcast/storageapis/v1/get_file_data_response.proto\x1a\x1cgoogle/api/annotations.proto2\xdf\x03\n" +
-	"\x0eStorageService\x12\xa7\x01\n" +
-	"\x14GetDirectoryManifest\x124.blobcast.storageapis.v1.GetDirectoryManifestRequest\x1a5.blobcast.storageapis.v1.GetDirectoryManifestResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/storage/directory/{id}\x12\x93\x01\n" +
-	"\x0fGetFileManifest\x12/.blobcast.storageapis.v1.GetFileManifestRequest\x1a0.blobcast.storageapis.v1.GetFileManifestResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/storage/file/{id}\x12\x8c\x01\n" +
-	"\vGetFileData\x12+.blobcast.storageapis.v1.GetFileDataRequest\x1a,.blobcast.storageapis.v1.GetFileDataResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/storage/file/{id}/dataBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
+	"-blobcast/storageapis/v1/storage_service.proto\x12\x17blobcast.storageapis.v1\x1a<blobcast/storageapis/v1/get_directory_manifest_request.proto\x1a=blobcast/storageapis/v1/get_directory_manifest_response.proto\x1a7blobcast/storageapis/v1/get_file_manifest_request.proto\x1a8blobcast/storageapis/v1/get_file_manifest_response.proto\x1a3blobcast/storageapis/v1/get_file_data_request.proto\x1a4blobcast/storageapis/v1/get_file_data_response.proto\x1a9blobcast/storageapis/v1/get_chunk_reference_request.proto\x1a:blobcast/storageapis/v1/get_chunk_reference_response.proto\x1a4blobcast/storageapis/v1/get_chunk_data_request.proto\x1a5blobcast/storageapis/v1/get_chunk_data_response.proto\x1a\x1cgoogle/api/annotations.proto2\x85\x06\n" +
+	"\x0eStorageService\x12\x92\x01\n" +
+	"\x11GetChunkReference\x121.blobcast.storageapis.v1.GetChunkReferenceRequest\x1a2.blobcast.storageapis.v1.GetChunkReferenceResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/chunk/{id}\x12\x88\x01\n" +
+	"\fGetChunkData\x12,.blobcast.storageapis.v1.GetChunkDataRequest\x1a-.blobcast.storageapis.v1.GetChunkDataResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/chunk/{id}/data\x12\xa9\x01\n" +
+	"\x14GetDirectoryManifest\x124.blobcast.storageapis.v1.GetDirectoryManifestRequest\x1a5.blobcast.storageapis.v1.GetDirectoryManifestResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/manifests/directory/{id}\x12\x95\x01\n" +
+	"\x0fGetFileManifest\x12/.blobcast.storageapis.v1.GetFileManifestRequest\x1a0.blobcast.storageapis.v1.GetFileManifestResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/manifests/file/{id}\x12\x8e\x01\n" +
+	"\vGetFileData\x12+.blobcast.storageapis.v1.GetFileDataRequest\x1a,.blobcast.storageapis.v1.GetFileDataResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/manifests/file/{id}/dataBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
 
 var file_blobcast_storageapis_v1_storage_service_proto_goTypes = []any{
-	(*GetDirectoryManifestRequest)(nil),  // 0: blobcast.storageapis.v1.GetDirectoryManifestRequest
-	(*GetFileManifestRequest)(nil),       // 1: blobcast.storageapis.v1.GetFileManifestRequest
-	(*GetFileDataRequest)(nil),           // 2: blobcast.storageapis.v1.GetFileDataRequest
-	(*GetDirectoryManifestResponse)(nil), // 3: blobcast.storageapis.v1.GetDirectoryManifestResponse
-	(*GetFileManifestResponse)(nil),      // 4: blobcast.storageapis.v1.GetFileManifestResponse
-	(*GetFileDataResponse)(nil),          // 5: blobcast.storageapis.v1.GetFileDataResponse
+	(*GetChunkReferenceRequest)(nil),     // 0: blobcast.storageapis.v1.GetChunkReferenceRequest
+	(*GetChunkDataRequest)(nil),          // 1: blobcast.storageapis.v1.GetChunkDataRequest
+	(*GetDirectoryManifestRequest)(nil),  // 2: blobcast.storageapis.v1.GetDirectoryManifestRequest
+	(*GetFileManifestRequest)(nil),       // 3: blobcast.storageapis.v1.GetFileManifestRequest
+	(*GetFileDataRequest)(nil),           // 4: blobcast.storageapis.v1.GetFileDataRequest
+	(*GetChunkReferenceResponse)(nil),    // 5: blobcast.storageapis.v1.GetChunkReferenceResponse
+	(*GetChunkDataResponse)(nil),         // 6: blobcast.storageapis.v1.GetChunkDataResponse
+	(*GetDirectoryManifestResponse)(nil), // 7: blobcast.storageapis.v1.GetDirectoryManifestResponse
+	(*GetFileManifestResponse)(nil),      // 8: blobcast.storageapis.v1.GetFileManifestResponse
+	(*GetFileDataResponse)(nil),          // 9: blobcast.storageapis.v1.GetFileDataResponse
 }
 var file_blobcast_storageapis_v1_storage_service_proto_depIdxs = []int32{
-	0, // 0: blobcast.storageapis.v1.StorageService.GetDirectoryManifest:input_type -> blobcast.storageapis.v1.GetDirectoryManifestRequest
-	1, // 1: blobcast.storageapis.v1.StorageService.GetFileManifest:input_type -> blobcast.storageapis.v1.GetFileManifestRequest
-	2, // 2: blobcast.storageapis.v1.StorageService.GetFileData:input_type -> blobcast.storageapis.v1.GetFileDataRequest
-	3, // 3: blobcast.storageapis.v1.StorageService.GetDirectoryManifest:output_type -> blobcast.storageapis.v1.GetDirectoryManifestResponse
-	4, // 4: blobcast.storageapis.v1.StorageService.GetFileManifest:output_type -> blobcast.storageapis.v1.GetFileManifestResponse
-	5, // 5: blobcast.storageapis.v1.StorageService.GetFileData:output_type -> blobcast.storageapis.v1.GetFileDataResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	0, // 0: blobcast.storageapis.v1.StorageService.GetChunkReference:input_type -> blobcast.storageapis.v1.GetChunkReferenceRequest
+	1, // 1: blobcast.storageapis.v1.StorageService.GetChunkData:input_type -> blobcast.storageapis.v1.GetChunkDataRequest
+	2, // 2: blobcast.storageapis.v1.StorageService.GetDirectoryManifest:input_type -> blobcast.storageapis.v1.GetDirectoryManifestRequest
+	3, // 3: blobcast.storageapis.v1.StorageService.GetFileManifest:input_type -> blobcast.storageapis.v1.GetFileManifestRequest
+	4, // 4: blobcast.storageapis.v1.StorageService.GetFileData:input_type -> blobcast.storageapis.v1.GetFileDataRequest
+	5, // 5: blobcast.storageapis.v1.StorageService.GetChunkReference:output_type -> blobcast.storageapis.v1.GetChunkReferenceResponse
+	6, // 6: blobcast.storageapis.v1.StorageService.GetChunkData:output_type -> blobcast.storageapis.v1.GetChunkDataResponse
+	7, // 7: blobcast.storageapis.v1.StorageService.GetDirectoryManifest:output_type -> blobcast.storageapis.v1.GetDirectoryManifestResponse
+	8, // 8: blobcast.storageapis.v1.StorageService.GetFileManifest:output_type -> blobcast.storageapis.v1.GetFileManifestResponse
+	9, // 9: blobcast.storageapis.v1.StorageService.GetFileData:output_type -> blobcast.storageapis.v1.GetFileDataResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -64,6 +74,10 @@ func file_blobcast_storageapis_v1_storage_service_proto_init() {
 	file_blobcast_storageapis_v1_get_file_manifest_response_proto_init()
 	file_blobcast_storageapis_v1_get_file_data_request_proto_init()
 	file_blobcast_storageapis_v1_get_file_data_response_proto_init()
+	file_blobcast_storageapis_v1_get_chunk_reference_request_proto_init()
+	file_blobcast_storageapis_v1_get_chunk_reference_response_proto_init()
+	file_blobcast_storageapis_v1_get_chunk_data_request_proto_init()
+	file_blobcast_storageapis_v1_get_chunk_data_response_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

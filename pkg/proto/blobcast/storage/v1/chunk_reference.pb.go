@@ -26,6 +26,7 @@ type ChunkReference struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            *v1.BlobIdentifier     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ChunkHash     []byte                 `protobuf:"bytes,2,opt,name=chunk_hash,json=chunkHash,proto3" json:"chunk_hash,omitempty"`
+	ChunkSize     uint64                 `protobuf:"varint,3,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -74,15 +75,24 @@ func (x *ChunkReference) GetChunkHash() []byte {
 	return nil
 }
 
+func (x *ChunkReference) GetChunkSize() uint64 {
+	if x != nil {
+		return x.ChunkSize
+	}
+	return 0
+}
+
 var File_blobcast_storage_v1_chunk_reference_proto protoreflect.FileDescriptor
 
 const file_blobcast_storage_v1_chunk_reference_proto_rawDesc = "" +
 	"\n" +
-	")blobcast/storage/v1/chunk_reference.proto\x12\x13blobcast.storage.v1\x1a,blobcast/primitives/v1/blob_identifier.proto\"g\n" +
+	")blobcast/storage/v1/chunk_reference.proto\x12\x13blobcast.storage.v1\x1a,blobcast/primitives/v1/blob_identifier.proto\"\x86\x01\n" +
 	"\x0eChunkReference\x126\n" +
 	"\x02id\x18\x01 \x01(\v2&.blobcast.primitives.v1.BlobIdentifierR\x02id\x12\x1d\n" +
 	"\n" +
-	"chunk_hash\x18\x02 \x01(\fR\tchunkHashB=Z;github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1b\x06proto3"
+	"chunk_hash\x18\x02 \x01(\fR\tchunkHash\x12\x1d\n" +
+	"\n" +
+	"chunk_size\x18\x03 \x01(\x04R\tchunkSizeB=Z;github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1b\x06proto3"
 
 var (
 	file_blobcast_storage_v1_chunk_reference_proto_rawDescOnce sync.Once

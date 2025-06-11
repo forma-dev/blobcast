@@ -10,22 +10,36 @@ import "blobcast/storageapis/v1/get_file_manifest_request.proto";
 import "blobcast/storageapis/v1/get_file_manifest_response.proto";
 import "blobcast/storageapis/v1/get_file_data_request.proto";
 import "blobcast/storageapis/v1/get_file_data_response.proto";
+import "blobcast/storageapis/v1/get_chunk_reference_request.proto";
+import "blobcast/storageapis/v1/get_chunk_reference_response.proto";
+import "blobcast/storageapis/v1/get_chunk_data_request.proto";
+import "blobcast/storageapis/v1/get_chunk_data_response.proto";
 import "google/api/annotations.proto";
 
 service StorageService {
+  rpc GetChunkReference(GetChunkReferenceRequest) returns (GetChunkReferenceResponse) {
+    option (google.api.http) = {
+      get: "/v1/chunk/{id}"
+    };
+  }
+  rpc GetChunkData(GetChunkDataRequest) returns (GetChunkDataResponse) {
+    option (google.api.http) = {
+      get: "/v1/chunk/{id}/data"
+    };
+  }
   rpc GetDirectoryManifest(GetDirectoryManifestRequest) returns (GetDirectoryManifestResponse) {
     option (google.api.http) = {
-      get: "/v1/storage/directory/{id}"
+      get: "/v1/manifests/directory/{id}"
     };
   }
   rpc GetFileManifest(GetFileManifestRequest) returns (GetFileManifestResponse) {
     option (google.api.http) = {
-      get: "/v1/storage/file/{id}"
+      get: "/v1/manifests/file/{id}"
     };
   }
   rpc GetFileData(GetFileDataRequest) returns (GetFileDataResponse) {
     option (google.api.http) = {
-      get: "/v1/storage/file/{id}/data"
+      get: "/v1/manifests/file/{id}/data"
     };
   }
 }

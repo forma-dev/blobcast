@@ -4,8 +4,8 @@ package blobcast.storageapis.v1;
 
 option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1";
 
-import "google/api/field_behavior.proto";
+import "blobcast/storage/v1/chunk_reference.proto";
 
-message GetFileManifestRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
+message GetChunkReferenceResponse {
+  blobcast.storage.v1.ChunkReference reference = 1;
 }

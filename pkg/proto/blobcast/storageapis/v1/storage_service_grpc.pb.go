@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	StorageService_GetChunkReference_FullMethodName    = "/blobcast.storageapis.v1.StorageService/GetChunkReference"
+	StorageService_GetChunkData_FullMethodName         = "/blobcast.storageapis.v1.StorageService/GetChunkData"
 	StorageService_GetDirectoryManifest_FullMethodName = "/blobcast.storageapis.v1.StorageService/GetDirectoryManifest"
 	StorageService_GetFileManifest_FullMethodName      = "/blobcast.storageapis.v1.StorageService/GetFileManifest"
 	StorageService_GetFileData_FullMethodName          = "/blobcast.storageapis.v1.StorageService/GetFileData"
@@ -28,6 +30,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StorageServiceClient interface {
+	GetChunkReference(ctx context.Context, in *GetChunkReferenceRequest, opts ...grpc.CallOption) (*GetChunkReferenceResponse, error)
+	GetChunkData(ctx context.Context, in *GetChunkDataRequest, opts ...grpc.CallOption) (*GetChunkDataResponse, error)
 	GetDirectoryManifest(ctx context.Context, in *GetDirectoryManifestRequest, opts ...grpc.CallOption) (*GetDirectoryManifestResponse, error)
 	GetFileManifest(ctx context.Context, in *GetFileManifestRequest, opts ...grpc.CallOption) (*GetFileManifestResponse, error)
 	GetFileData(ctx context.Context, in *GetFileDataRequest, opts ...grpc.CallOption) (*GetFileDataResponse, error)
@@ -39,6 +43,26 @@ type storageServiceClient struct {
 
 func NewStorageServiceClient(cc grpc.ClientConnInterface) StorageServiceClient {
 	return &storageServiceClient{cc}
+}
+
+func (c *storageServiceClient) GetChunkReference(ctx context.Context, in *GetChunkReferenceRequest, opts ...grpc.CallOption) (*GetChunkReferenceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChunkReferenceResponse)
+	err := c.cc.Invoke(ctx, StorageService_GetChunkReference_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storageServiceClient) GetChunkData(ctx context.Context, in *GetChunkDataRequest, opts ...grpc.CallOption) (*GetChunkDataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChunkDataResponse)
+	err := c.cc.Invoke(ctx, StorageService_GetChunkData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *storageServiceClient) GetDirectoryManifest(ctx context.Context, in *GetDirectoryManifestRequest, opts ...grpc.CallOption) (*GetDirectoryManifestResponse, error) {
@@ -75,6 +99,8 @@ func (c *storageServiceClient) GetFileData(ctx context.Context, in *GetFileDataR
 // All implementations must embed UnimplementedStorageServiceServer
 // for forward compatibility.
 type StorageServiceServer interface {
+	GetChunkReference(context.Context, *GetChunkReferenceRequest) (*GetChunkReferenceResponse, error)
+	GetChunkData(context.Context, *GetChunkDataRequest) (*GetChunkDataResponse, error)
 	GetDirectoryManifest(context.Context, *GetDirectoryManifestRequest) (*GetDirectoryManifestResponse, error)
 	GetFileManifest(context.Context, *GetFileManifestRequest) (*GetFileManifestResponse, error)
 	GetFileData(context.Context, *GetFileDataRequest) (*GetFileDataResponse, error)
@@ -88,6 +114,12 @@ type StorageServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedStorageServiceServer struct{}
 
+func (UnimplementedStorageServiceServer) GetChunkReference(context.Context, *GetChunkReferenceRequest) (*GetChunkReferenceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChunkReference not implemented")
+}
+func (UnimplementedStorageServiceServer) GetChunkData(context.Context, *GetChunkDataRequest) (*GetChunkDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChunkData not implemented")
+}
 func (UnimplementedStorageServiceServer) GetDirectoryManifest(context.Context, *GetDirectoryManifestRequest) (*GetDirectoryManifestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDirectoryManifest not implemented")
 }
@@ -116,6 +148,42 @@ func RegisterStorageServiceServer(s grpc.ServiceRegistrar, srv StorageServiceSer
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&StorageService_ServiceDesc, srv)
+}
+
+func _StorageService_GetChunkReference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChunkReferenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageServiceServer).GetChunkReference(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StorageService_GetChunkReference_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageServiceServer).GetChunkReference(ctx, req.(*GetChunkReferenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StorageService_GetChunkData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChunkDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageServiceServer).GetChunkData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StorageService_GetChunkData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageServiceServer).GetChunkData(ctx, req.(*GetChunkDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _StorageService_GetDirectoryManifest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -179,6 +247,14 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "blobcast.storageapis.v1.StorageService",
 	HandlerType: (*StorageServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetChunkReference",
+			Handler:    _StorageService_GetChunkReference_Handler,
+		},
+		{
+			MethodName: "GetChunkData",
+			Handler:    _StorageService_GetChunkData_Handler,
+		},
 		{
 			MethodName: "GetDirectoryManifest",
 			Handler:    _StorageService_GetDirectoryManifest_Handler,

@@ -101,13 +101,13 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 	}
 
 	dirManifestResponse, err := storageClient.GetDirectoryManifest(context.Background(), &pbStorageapisV1.GetDirectoryManifestRequest{
-		Id: manifestIdentifier.Proto(),
+		Id: manifestIdentifier.ID(),
 	})
 
 	if err != nil {
 		// check if this is a file manifest
 		_, err := storageClient.GetFileManifest(context.Background(), &pbStorageapisV1.GetFileManifestRequest{
-			Id: manifestIdentifier.Proto(),
+			Id: manifestIdentifier.ID(),
 		})
 		if err != nil {
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -227,7 +227,7 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 				}
 
 				fileManifestResponse, err := storageClient.GetFileManifest(context.Background(), &pbStorageapisV1.GetFileManifestRequest{
-					Id: fileManifestIdentifier.Proto(),
+					Id: fileManifestIdentifier.ID(),
 				})
 				if err == nil {
 					fileSize = formatFileSize(fileManifestResponse.Manifest.FileSize)
@@ -264,7 +264,7 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 func serveFile(w http.ResponseWriter, r *http.Request, storageClient pbStorageapisV1.StorageServiceClient, fileManifestIdentifier *types.BlobIdentifier) {
 	// Get the file manifest to determine mime type
 	fileManifestResponse, err := storageClient.GetFileManifest(context.Background(), &pbStorageapisV1.GetFileManifestRequest{
-		Id: fileManifestIdentifier.Proto(),
+		Id: fileManifestIdentifier.ID(),
 	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error fetching file manifest: %v", err), http.StatusInternalServerError)
@@ -273,7 +273,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, storageClient pbStorageap
 
 	// Get the file data
 	fileDataResponse, err := storageClient.GetFileData(context.Background(), &pbStorageapisV1.GetFileDataRequest{
-		Id: fileManifestIdentifier.Proto(),
+		Id: fileManifestIdentifier.ID(),
 	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error fetching file data: %v", err), http.StatusInternalServerError)

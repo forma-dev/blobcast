@@ -184,7 +184,7 @@ func (s *Server) getFileManifest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := s.storageClient.GetFileManifest(context.Background(), &pbStorageapisV1.GetFileManifestRequest{
-		Id: id.Proto(),
+		Id: id.ID(),
 	})
 	if err != nil {
 		http.Error(w, "Manifest not found", http.StatusNotFound)
@@ -219,7 +219,7 @@ func (s *Server) getDirectoryManifest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := s.storageClient.GetDirectoryManifest(context.Background(), &pbStorageapisV1.GetDirectoryManifestRequest{
-		Id: id.Proto(),
+		Id: id.ID(),
 	})
 	if err != nil {
 		http.Error(w, "Manifest not found", http.StatusNotFound)

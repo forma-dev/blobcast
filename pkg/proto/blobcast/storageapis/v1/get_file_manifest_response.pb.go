@@ -7,8 +7,7 @@
 package v1
 
 import (
-	v1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/primitives/v1"
-	v11 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
+	v1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -25,8 +24,7 @@ const (
 
 type GetFileManifestResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *v1.BlobIdentifier     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Manifest      *v11.FileManifest      `protobuf:"bytes,2,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	Manifest      *v1.FileManifest       `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,14 +59,7 @@ func (*GetFileManifestResponse) Descriptor() ([]byte, []int) {
 	return file_blobcast_storageapis_v1_get_file_manifest_response_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetFileManifestResponse) GetId() *v1.BlobIdentifier {
-	if x != nil {
-		return x.Id
-	}
-	return nil
-}
-
-func (x *GetFileManifestResponse) GetManifest() *v11.FileManifest {
+func (x *GetFileManifestResponse) GetManifest() *v1.FileManifest {
 	if x != nil {
 		return x.Manifest
 	}
@@ -79,10 +70,9 @@ var File_blobcast_storageapis_v1_get_file_manifest_response_proto protoreflect.F
 
 const file_blobcast_storageapis_v1_get_file_manifest_response_proto_rawDesc = "" +
 	"\n" +
-	"8blobcast/storageapis/v1/get_file_manifest_response.proto\x12\x17blobcast.storageapis.v1\x1a,blobcast/primitives/v1/blob_identifier.proto\x1a'blobcast/storage/v1/file_manifest.proto\"\x90\x01\n" +
-	"\x17GetFileManifestResponse\x126\n" +
-	"\x02id\x18\x01 \x01(\v2&.blobcast.primitives.v1.BlobIdentifierR\x02id\x12=\n" +
-	"\bmanifest\x18\x02 \x01(\v2!.blobcast.storage.v1.FileManifestR\bmanifestBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
+	"8blobcast/storageapis/v1/get_file_manifest_response.proto\x12\x17blobcast.storageapis.v1\x1a'blobcast/storage/v1/file_manifest.proto\"X\n" +
+	"\x17GetFileManifestResponse\x12=\n" +
+	"\bmanifest\x18\x01 \x01(\v2!.blobcast.storage.v1.FileManifestR\bmanifestBAZ?github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1b\x06proto3"
 
 var (
 	file_blobcast_storageapis_v1_get_file_manifest_response_proto_rawDescOnce sync.Once
@@ -99,17 +89,15 @@ func file_blobcast_storageapis_v1_get_file_manifest_response_proto_rawDescGZIP()
 var file_blobcast_storageapis_v1_get_file_manifest_response_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_blobcast_storageapis_v1_get_file_manifest_response_proto_goTypes = []any{
 	(*GetFileManifestResponse)(nil), // 0: blobcast.storageapis.v1.GetFileManifestResponse
-	(*v1.BlobIdentifier)(nil),       // 1: blobcast.primitives.v1.BlobIdentifier
-	(*v11.FileManifest)(nil),        // 2: blobcast.storage.v1.FileManifest
+	(*v1.FileManifest)(nil),         // 1: blobcast.storage.v1.FileManifest
 }
 var file_blobcast_storageapis_v1_get_file_manifest_response_proto_depIdxs = []int32{
-	1, // 0: blobcast.storageapis.v1.GetFileManifestResponse.id:type_name -> blobcast.primitives.v1.BlobIdentifier
-	2, // 1: blobcast.storageapis.v1.GetFileManifestResponse.manifest:type_name -> blobcast.storage.v1.FileManifest
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	1, // 0: blobcast.storageapis.v1.GetFileManifestResponse.manifest:type_name -> blobcast.storage.v1.FileManifest
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_blobcast_storageapis_v1_get_file_manifest_response_proto_init() }

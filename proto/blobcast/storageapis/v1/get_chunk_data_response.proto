@@ -4,8 +4,6 @@ package blobcast.storageapis.v1;
 
 option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1";
 
-import "google/api/field_behavior.proto";
-
-message GetFileManifestRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
+message GetChunkDataResponse {
+  bytes data = 1;
 }

@@ -23,7 +23,10 @@ func (s *StorageServiceServer) GetDirectoryManifest(
 	ctx context.Context,
 	req *pbStorageapisV1.GetDirectoryManifestRequest,
 ) (*pbStorageapisV1.GetDirectoryManifestResponse, error) {
-	dirManifestId := types.BlobIdentifierFromProto(req.Id)
+	dirManifestId, err := types.BlobIdentifierFromString(req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid manifest ID: %v", err)
+	}
 	dirManifest, err := node.GetDirectoryManifest(ctx, dirManifestId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting directory manifest: %v", err)
@@ -36,7 +39,10 @@ func (s *StorageServiceServer) GetFileManifest(
 	ctx context.Context,
 	req *pbStorageapisV1.GetFileManifestRequest,
 ) (*pbStorageapisV1.GetFileManifestResponse, error) {
-	fileManifestId := types.BlobIdentifierFromProto(req.Id)
+	fileManifestId, err := types.BlobIdentifierFromString(req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid manifest ID: %v", err)
+	}
 	fileManifest, err := node.GetFileManifest(ctx, fileManifestId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting file manifest: %v", err)
@@ -49,11 +55,46 @@ func (s *StorageServiceServer) GetFileData(
 	ctx context.Context,
 	req *pbStorageapisV1.GetFileDataRequest,
 ) (*pbStorageapisV1.GetFileDataResponse, error) {
-	fileManifestId := types.BlobIdentifierFromProto(req.Id)
+	fileManifestId, err := types.BlobIdentifierFromString(req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid manifest ID: %v", err)
+	}
 	fileData, err := node.GetFileData(ctx, fileManifestId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error getting file data: %v", err)
 	}
 
 	return &pbStorageapisV1.GetFileDataResponse{Data: fileData}, nil
+}
+
+func (s *StorageServiceServer) GetChunkReference(
+	ctx context.Context,
+	req *pbStorageapisV1.GetChunkReferenceRequest,
+) (*pbStorageapisV1.GetChunkReferenceResponse, error) {
+	chunkId, err := types.BlobIdentifierFromString(req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid chunk ID: %v", err)
+	}
+	chunkReference, err := node.GetChunkReference(ctx, chunkId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error getting chunk reference: %v", err)
+	}
+
+	return &pbStorageapisV1.GetChunkReferenceResponse{Reference: chunkReference}, nil
+}
+
+func (s *StorageServiceServer) GetChunkData(
+	ctx context.Context,
+	req *pbStorageapisV1.GetChunkDataRequest,
+) (*pbStorageapisV1.GetChunkDataResponse, error) {
+	chunkId, err := types.BlobIdentifierFromString(req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid chunk ID: %v", err)
+	}
+	chunkData, err := node.GetChunkData(ctx, chunkId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error getting chunk data: %v", err)
+	}
+
+	return &pbStorageapisV1.GetChunkDataResponse{Data: chunkData}, nil
 }

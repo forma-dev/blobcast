@@ -29,7 +29,7 @@ func GetFileData(ctx context.Context, id *types.BlobIdentifier) ([]byte, error) 
 	for i, chunk := range fileManifest.Chunks {
 		slog.Debug("Getting chunk data", "chunk_index", i+1, "num_chunks", len(fileManifest.Chunks))
 
-		data, err := GetChunkData(ctx, chunk)
+		data, err := GetChunkData(ctx, types.BlobIdentifierFromProto(chunk.Id))
 		if err != nil {
 			return nil, fmt.Errorf("error downloading chunk %d: %v", i+1, err)
 		}
