@@ -47,3 +47,6 @@ docker-compose.*.yml
 # Temporary files
 tmp/
 temp/
+
+# Test data files
+test-*

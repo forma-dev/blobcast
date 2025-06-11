@@ -6,7 +6,7 @@ ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=1
 ENV GO111MODULE=on
 
 RUN apk update && apk add --no-cache bash git gcc musl-dev
@@ -18,7 +18,7 @@ RUN go mod download
 COPY . .
 
 RUN export CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} && \
-  go build -ldflags="-w -s" -o build/blobcast .
+  go build --tags "fts5" -ldflags="-w -s" -o build/blobcast .
 
 # Runtime stage
 FROM alpine:latest
