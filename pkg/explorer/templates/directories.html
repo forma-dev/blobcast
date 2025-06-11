@@ -1,0 +1,87 @@
+{{define "content"}}
+<div class="relative bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 rounded-xl shadow-2xl text-white p-10 mb-8 overflow-hidden">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
+    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+    <div class="absolute top-4 right-4 opacity-20">
+        <svg class="w-24 h-24" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+        </svg>
+    </div>
+    <div class="relative">
+        <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-amber-100 to-white bg-clip-text text-transparent">
+            Blobcast Directories
+        </h1>
+        <p class="text-amber-100 text-xl font-medium opacity-90">{{.TotalDirectories}} total directories indexed</p>
+    </div>
+</div>
+
+{{if .Directories}}
+<div class="relative bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+    <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+        <h4 class="text-lg font-semibold text-gray-900">All Directories</h4>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gradient-to-r from-gray-50 via-gray-100 to-gray-50">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Directory Name</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Files</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Size</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Block</th>
+                    <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {{range .Directories}}
+                <tr class="hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="/directories/{{.BlobID}}" class="text-sm font-medium text-orange-600 hover:text-orange-900">
+                            {{.DirectoryName}}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-emerald-400 to-emerald-500 text-white shadow-md">
+                            {{.FileCount}}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{{.TotalSize}}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="/blocks/{{.BlockHeight}}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md hover:from-blue-500 hover:to-blue-600 transition-all duration-200">
+                            #{{.BlockHeight}}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex gap-3 justify-end">
+                            <a href="/directories/{{.BlobID}}" class="inline-flex items-center px-3 py-1.5 border border-orange-300 rounded-lg text-orange-700 bg-white hover:bg-orange-50 hover:border-orange-400 font-semibold transition-all duration-200">
+                                Details
+                            </a>
+                            <a href="{{$.GatewayUrl}}/{{.BlobID}}" target="_blank" class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-white bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 font-semibold shadow-md transition-all duration-200">
+                                Browse
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{if and .Pagination (gt .Pagination.TotalPages 1)}}
+{{template "pagination" .Pagination}}
+{{end}}
+
+{{else}}
+<div class="relative bg-white rounded-xl shadow-xl border border-gray-100 p-12 text-center overflow-hidden">
+    <div class="relative">
+        <h3 class="text-2xl font-bold text-gray-900 mb-3">No directories found</h3>
+        <p class="text-gray-600 text-lg">Start the indexer to discover and index directories.</p>
+        <div class="mt-6">
+            <div class="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                Waiting for directory data
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+{{end}}

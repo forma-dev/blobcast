@@ -1,0 +1,477 @@
+{{define "content"}}
+<div class="relative bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 rounded-3xl shadow-2xl text-white p-12 mb-12 overflow-hidden">
+    <div class="relative text-center">
+        <h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+            Welcome to Blobcast Explorer
+        </h2>
+        <div class="mt-10 max-w-2xl mx-auto">
+            <form action="/search" method="get" class="flex gap-4">
+                <div class="flex-1">
+                    <input type="text" name="q" placeholder="Search files and directories..."
+                           class="block w-full px-6 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl shadow-lg placeholder-white/70 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/40 text-lg transition-all duration-200 hover:bg-white/15">
+                </div>
+                <button type="submit" class="inline-flex items-center px-8 py-4 bg-white/20 backdrop-blur-sm border-2 border-white/30 text-sm font-semibold rounded-xl shadow-lg text-white hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/50 transform hover:scale-105 transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Search
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+        <div class="relative bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-xl shadow-xl p-6 text-white transform transition-all duration-300 overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+            <div class="absolute top-4 right-4 opacity-20">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75 2.25 12l4.179 2.25m0-4.5 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0 4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0-5.571 3-5.571-3" />
+                </svg>
+            </div>
+            <div class="relative">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium mb-1">Total Blocks</p>
+                    <p class="text-4xl font-bold" data-stat="total-blocks">{{.Analytics.TotalBlocks}}</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative bg-gradient-to-br from-gray-500 via-slate-600 to-slate-700 rounded-xl shadow-xl p-6 text-white transform transition-all duration-300 overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+            <div class="absolute top-4 right-4 opacity-20">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+            </div>
+            <div class="relative">
+                <div>
+                    <p class="text-gray-100 text-sm font-medium mb-1">Total Chunks</p>
+                    <p class="text-4xl font-bold" data-stat="total-chunks">{{.Analytics.TotalChunks}}</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 rounded-xl shadow-xl p-6 text-white transform transition-all duration-300 overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+            <div class="absolute top-4 right-4 opacity-20">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+            </div>
+            <div class="relative">
+                <div>
+                    <p class="text-emerald-100 text-sm font-medium mb-1">Total Files</p>
+                    <p class="text-4xl font-bold" data-stat="total-files">{{.Analytics.TotalFiles}}</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 rounded-xl shadow-xl p-6 text-white transform transition-all duration-300 overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+            <div class="absolute top-4 right-4 opacity-20">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+                </svg>
+            </div>
+            <div class="relative">
+                <div>
+                    <p class="text-amber-100 text-sm font-medium mb-1">Total Directories</p>
+                    <p class="text-4xl font-bold" data-stat="total-directories">{{.Analytics.TotalDirectories}}</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-700 rounded-xl shadow-xl p-6 text-white transform transition-all duration-300 overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+            <div class="absolute top-4 right-4 opacity-20">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+                </svg>
+            </div>
+            <div class="relative">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium mb-1">Total Storage</p>
+                    <p class="text-4xl font-bold" data-stat="total-storage">{{.Analytics.TotalStorage}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h3 class="text-3xl font-bold text-gray-900">Recent Blocks</h3>
+            <p class="mt-2 text-gray-600">Latest activity on the blockchain</p>
+        </div>
+        <a href="/blocks" class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
+            View All Blocks
+            <svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+        </a>
+    </div>
+
+    {{if .RecentBlocks}}
+    <div id="blocks-table" class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+        <!-- <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900">Latest Blockchain Activity</h4>
+        </div> -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gradient-to-r from-gray-50 via-gray-100 to-gray-50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Height</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Hash</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Chunks</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Files</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Directories</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Storage</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Time</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-blocks-tbody" class="bg-white divide-y divide-gray-100">
+                    {{range .RecentBlocks}}
+                    <tr class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="/blocks/{{.Height}}" class="text-blue-600 hover:text-blue-800 font-bold text-lg hover:underline transition-colors">
+                                #{{.Height}}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <code class="text-sm bg-gradient-to-r from-gray-100 to-gray-200 px-3 py-1.5 rounded-lg font-mono border border-gray-300">{{.Hash}}</code>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-gray-400 to-slate-500 text-white shadow-md">
+                                {{.TotalChunks}}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-emerald-400 to-emerald-500 text-white shadow-md">
+                                {{.TotalFiles}}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md">
+                                {{.TotalDirectories}}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{.StorageUsed}}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{.Timestamp}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{else}}
+    <div id="no-blocks-message" class="relative bg-gradient-to-br from-gray-50 via-white to-blue-50 rounded-xl shadow-xl border border-gray-200 p-12 text-center overflow-hidden">
+        <div class="absolute top-0 right-0 w-20 h-20 bg-blue-400/10 rounded-full -translate-y-10 translate-x-10"></div>        <div class="absolute top-0 right-0 w-20 h-20 bg-blue-400/10 rounded-full -translate-y-10 translate-x-10"></div>
+        <div class="absolute bottom-0 left-0 w-24 h-24 bg-gray-400/10 rounded-full translate-y-12 -translate-x-12"></div>
+        <div class="relative">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full mb-4 shadow-lg">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">No blocks found</h3>
+            <p class="text-gray-600">Start the indexer to see blockchain activity.</p>
+        </div>
+    </div>
+    {{end}}
+</div>
+
+<script>
+    let autoRefreshInterval;
+    let isRefreshing = false;
+    let currentBlocks = new Map(); // Track current blocks by height
+    
+    // Configuration
+    const REFRESH_INTERVAL = 3000;
+    const ANALYTICS_ENDPOINT = '/api/v1/analytics';
+    const BLOCKS_ENDPOINT = '/api/v1/blocks?limit=50';
+    const MAX_BLOCKS_DISPLAY = 50;
+    
+    // Utility function to format bytes
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    // Create a block row element
+    function createBlockRow(block, isNew = false) {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200';
+        row.dataset.blockHeight = block.height;
+        
+        if (isNew) {
+            row.classList.add('new-block-row');
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <a href="/blocks/${block.height}" class="text-blue-600 hover:text-blue-800 font-bold text-lg hover:underline transition-colors">
+                    #${block.height}
+                </a>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <code class="text-sm bg-gradient-to-r from-gray-100 to-gray-200 px-3 py-1.5 rounded-lg font-mono border border-gray-300" title="${block.full_hash}">${block.hash}</code>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-gray-400 to-slate-500 text-white shadow-md">
+                    ${block.total_chunks}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-emerald-400 to-emerald-500 text-white shadow-md">
+                    ${block.total_files}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-md">
+                    ${block.total_directories}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${block.storage_used}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${block.timestamp}</td>
+        `;
+        
+        return row;
+    }
+    
+    // Initialize current blocks from the existing table
+    function initializeCurrentBlocks() {
+        const tableBody = document.querySelector('#recent-blocks-tbody');
+        if (!tableBody) return;
+        
+        const existingRows = tableBody.querySelectorAll('tr[data-block-height]');
+        existingRows.forEach(row => {
+            const height = parseInt(row.dataset.blockHeight);
+            if (!isNaN(height)) {
+                currentBlocks.set(height, true);
+            }
+        });
+    }
+    
+    // Update analytics cards
+    async function updateAnalytics() {
+        try {
+            const response = await fetch(ANALYTICS_ENDPOINT);
+            if (!response.ok) throw new Error('Failed to fetch analytics');
+            
+            const data = await response.json();
+            
+            // Update the stat cards with smooth transitions
+            const elements = {
+                'total-blocks': data.total_blocks || 0,
+                'total-chunks': data.total_chunks || 0,
+                'total-files': data.total_files || 0,
+                'total-directories': data.total_directories || 0,
+                'total-storage': formatBytes(data.total_storage || 0)
+            };
+            
+            Object.entries(elements).forEach(([key, value]) => {
+                const element = document.querySelector(`[data-stat="${key}"]`);
+                if (element && element.textContent !== value.toString()) {
+                    element.style.transform = 'scale(1.05)';
+                    element.textContent = value;
+                    setTimeout(() => {
+                        element.style.transform = 'scale(1)';
+                    }, 200);
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error updating analytics:', error);
+        }
+    }
+    
+    // Update recent blocks table with animation
+    async function updateRecentBlocks() {
+        try {
+            const response = await fetch(BLOCKS_ENDPOINT);
+            if (!response.ok) throw new Error('Failed to fetch blocks');
+            
+            const data = await response.json();
+            const blocks = data.blocks || [];
+            
+            const tableBody = document.querySelector('#recent-blocks-tbody');
+            const noBlocksMessage = document.querySelector('#no-blocks-message');
+            const blocksTable = document.querySelector('#blocks-table');
+            
+            if (blocks.length === 0) {
+                if (blocksTable) blocksTable.classList.add('hidden');
+                if (noBlocksMessage) noBlocksMessage.classList.remove('hidden');
+                return;
+            }
+            
+            if (noBlocksMessage) noBlocksMessage.classList.add('hidden');
+            if (blocksTable) blocksTable.classList.remove('hidden');
+            
+            if (!tableBody) return;
+            
+            // If this is the first load, initialize current blocks
+            if (currentBlocks.size === 0) {
+                initializeCurrentBlocks();
+            }
+            
+            // Sort blocks by height descending (newest first)
+            blocks.sort((a, b) => b.height - a.height);
+            
+            // Find new blocks
+            const newBlocks = blocks.filter(block => !currentBlocks.has(block.height));
+            
+            if (newBlocks.length > 0) {
+                // Add new blocks to our tracking
+                newBlocks.forEach(block => currentBlocks.set(block.height, true));
+                
+                // Insert new blocks at the top with animation
+                newBlocks.reverse().forEach((block, index) => {
+                    setTimeout(() => {
+                        const newRow = createBlockRow(block, true);
+                        tableBody.insertBefore(newRow, tableBody.firstChild);
+                        
+                        // Trigger animation
+                        requestAnimationFrame(() => {
+                            newRow.classList.add('animate-in');
+                        });
+                        
+                        // Remove animation class after animation completes
+                        setTimeout(() => {
+                            newRow.classList.remove('new-block-row', 'animate-in');
+                        }, 600);
+                    }, index * 100); // Stagger the animations
+                });
+                
+                // Remove excess rows if we have too many
+                setTimeout(() => {
+                    const allRows = tableBody.querySelectorAll('tr');
+                    if (allRows.length > MAX_BLOCKS_DISPLAY) {
+                        for (let i = MAX_BLOCKS_DISPLAY; i < allRows.length; i++) {
+                            const row = allRows[i];
+                            const height = parseInt(row.dataset.blockHeight);
+                            if (!isNaN(height)) {
+                                currentBlocks.delete(height);
+                            }
+                            row.remove();
+                        }
+                    }
+                }, newBlocks.length * 100 + 200);
+            }
+            
+        } catch (error) {
+            console.error('Error updating recent blocks:', error);
+        }
+    }
+
+    async function refreshData() {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        try {
+            await Promise.all([updateAnalytics(), updateRecentBlocks()]);
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+        } finally {
+            isRefreshing = false;
+        }
+    }
+
+    // Start auto-refresh
+    function startAutoRefresh() {
+        // Clear any existing interval
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        
+        // Start the interval
+        autoRefreshInterval = setInterval(refreshData, REFRESH_INTERVAL);
+        
+        // Also refresh immediately
+        refreshData();
+    }
+    
+    // Stop auto-refresh
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+    }
+    
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add data-block-height attributes to existing rows for tracking
+        const existingRows = document.querySelectorAll('#recent-blocks-tbody tr');
+        existingRows.forEach(row => {
+            const heightLink = row.querySelector('a[href*="/blocks/"]');
+            if (heightLink) {
+                const height = heightLink.textContent.replace('#', '');
+                row.dataset.blockHeight = height;
+            }
+        });
+        
+        startAutoRefresh();
+    });
+    
+    // Clean up when page unloads
+    window.addEventListener('beforeunload', function() {
+        stopAutoRefresh();
+    });
+    
+    // Pause refresh when tab is not visible (performance optimization)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    });
+    </script>
+    
+    <style>
+    /* Animation styles for new block rows */
+    .new-block-row {
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .new-block-row.animate-in {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    /* Highlight animation for new blocks */
+    .new-block-row.animate-in {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+        animation: newBlockPulse 2s ease-in-out;
+    }
+    
+    @keyframes newBlockPulse {
+        0% {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        50% {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+        }
+        100% {
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+    
+    /* Smooth scale animation for stat updates */
+    [data-stat] {
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+</style>
+
+{{end}}

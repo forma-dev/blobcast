@@ -30,7 +30,7 @@ func NewIndexerService(
 	rollupClient pbRollupapisV1.RollupServiceClient,
 	startHeight uint64,
 ) (*IndexerService, error) {
-	indexDB, err := state.NewIndexerDatabase()
+	indexDB, err := state.NewIndexerDatabase("")
 	if err != nil {
 		return nil, fmt.Errorf("error creating index database: %v", err)
 	}

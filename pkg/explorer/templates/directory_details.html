@@ -1,0 +1,112 @@
+{{define "content"}}
+<div class="relative bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 rounded-xl shadow-2xl text-white p-10 mb-8 overflow-hidden">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
+    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
+    <div class="absolute top-4 right-4 opacity-20">
+        <svg class="w-24 h-24" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+        </svg>
+    </div>
+    <div class="relative">
+        <nav class="flex mb-6" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="/" class="inline-flex items-center text-sm font-medium text-amber-100 hover:text-white transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-9 9a1 1 0 001.414 1.414L8 5.414V17a1 1 0 102 0V5.414l6.293 6.293a1 1 0 001.414-1.414l-9-9z"/>
+                        </svg>
+                        Home
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <a href="/directories" class="ml-1 text-sm font-medium text-amber-100 hover:text-white md:ml-2 transition-colors">Directories</a>
+                    </div>
+                </li>
+                <li aria-current="page">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span class="ml-1 text-sm font-medium text-amber-200 md:ml-2">{{.Directory.DirectoryName}}</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+        <div class="flex items-end justify-between">
+            <div>
+                <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-amber-100 to-white bg-clip-text text-transparent">
+                    Directory
+                </h1>
+                <p class="text-amber-100 text-xl font-medium opacity-90">{{.Directory.DirectoryName}}</p>
+            </div>
+            <div>
+                <a href="{{$.GatewayUrl}}/{{.Directory.BlobID}}" target="_blank" class="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 font-semibold transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    Browse Directory
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="relative bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden mb-8">
+    <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">Directory Details</h3>
+    </div>
+    <div class="relative px-6 py-4">
+        <dl>
+            <div class="flex justify-between items-start pb-4 border-b border-gray-200">
+                <dt class="text-sm font-medium text-gray-600">Directory Name</dt>
+                <dd class="text-sm text-gray-900">{{.Directory.DirectoryName}}</dd>
+            </div>
+            <div class="flex justify-between items-start py-4 border-b border-gray-200">
+                <dt class="text-sm font-medium text-gray-600">Total Size</dt>
+                <dd class="text-sm text-gray-900">{{.Directory.TotalSize}}</dd>
+            </div>
+            <div class="flex justify-between items-start py-4 border-b border-gray-200">
+                <dt class="text-sm font-medium text-gray-600">Block Height</dt>
+                <dd class="text-sm text-gray-900">
+                    <a href="/blocks/{{.Directory.BlockHeight}}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md hover:from-blue-500 hover:to-blue-600 transition-all duration-200">
+                        #{{.Directory.BlockHeight}}
+                    </a>
+                </dd>
+            </div>
+            <div class="flex justify-between items-start py-4 border-b border-gray-200">
+                <dt class="text-sm font-medium text-gray-600">Blob ID</dt>
+                <dd class="text-sm text-gray-900 font-mono break-all">{{.Directory.BlobID}}</dd>
+            </div>
+            <div class="flex justify-between items-start py-4 border-b border-gray-200">
+                <dt class="text-sm font-medium text-gray-600">Directory Hash</dt>
+                <dd class="text-sm text-gray-900 font-mono break-all">{{.Directory.DirectoryHash}}</dd>
+            </div>
+            <div class="flex justify-between items-start py-4 border-b border-gray-200">
+                <dt class="text-sm font-medium text-gray-600">Files</dt>
+                <dd class="text-sm text-gray-900">{{.Directory.FileCount}}</dd>
+            </div>
+            <div class="flex justify-between items-start pt-4">
+                <dt class="text-sm font-medium text-gray-600">File Types</dt>
+                <dd class="text-sm text-gray-900">
+                    {{if .Directory.FileTypes}}
+                    <div class="flex flex-wrap gap-2">
+                        {{range .Directory.FileTypes}}
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            {{.}}
+                        </span>
+                        {{end}}
+                    </div>
+                    {{else}}
+                    <span class="text-gray-500 italic bg-white/50 p-2 rounded">No specific file types detected</span>
+                    {{end}}
+                </dd>
+            </div>
+        </dl>
+    </div>
+</div>
+
+{{end}}

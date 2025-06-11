@@ -92,10 +92,13 @@ type IndexerDatabase struct {
 	db *sql.DB
 }
 
-func NewIndexerDatabase() (*IndexerDatabase, error) {
-	indexerDbPath, err := getStateDbPath(IndexerStateDb)
-	if err != nil {
-		return nil, fmt.Errorf("error getting indexer database path: %v", err)
+func NewIndexerDatabase(indexerDbPath string) (*IndexerDatabase, error) {
+	if indexerDbPath == "" {
+		var err error
+		indexerDbPath, err = getStateDbPath(IndexerStateDb)
+		if err != nil {
+			return nil, fmt.Errorf("error getting indexer database path: %v", err)
+		}
 	}
 	slog.Info("opening indexer database", "path", indexerDbPath)
 
