@@ -2,6 +2,7 @@ package mmr
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/forma-dev/blobcast/pkg/crypto"
 )
@@ -34,6 +35,15 @@ func (mmr *MMR) NumPeaks() uint64 {
 
 func (mmr *MMR) Size() uint64 {
 	return mmr.size
+}
+
+func (mmr *MMR) LeafIndex(leaf []byte) (uint64, error) {
+	leafHash := crypto.HashBytes(leaf)
+	index, ok := mmr.leafIndexes[leafHash]
+	if !ok {
+		return 0, fmt.Errorf("leaf not found")
+	}
+	return index, nil
 }
 
 func (mmr *MMR) Root() crypto.Hash {
