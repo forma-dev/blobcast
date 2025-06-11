@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	flagAddr       string
-	flagPort       string
-	flagIndexerDb  string
-	flagGatewayUrl string
+	flagAddr         string
+	flagPort         string
+	flagGatewayUrl   string
+	flagDbConnString string
 )
 
 var explorerCmd = &cobra.Command{
@@ -20,4 +20,7 @@ var explorerCmd = &cobra.Command{
 
 func init() {
 	cmd.RootCmd.AddCommand(explorerCmd)
+
+	explorerCmd.PersistentFlags().
+		StringVar(&flagDbConnString, "db-conn", cmd.GetEnvWithDefault("BLOBCAST_DB_CONNECTION_STRING", "postgres://postgres:secret@127.0.0.1:5432/postgres?sslmode=disable"), "Connection string for the indexer database")
 }

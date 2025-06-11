@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Celestia Light Node
   celestia:
     image: ghcr.io/celestiaorg/celestia-node:v0.23.1-mocha
     container_name: celestia-light
@@ -29,11 +28,28 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
-
-  # Blobcast Node (builds the shared image)
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - blobcast-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
   blobcast-node:
-    build: 
-      context: .
+    build:
+      context: ..
     image: blobcast:latest
     container_name: blobcast-node
     command: |
@@ -58,8 +74,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-
-  # Blobcast Gateway (uses shared image)
   blobcast-gateway:
     image: blobcast:latest
     pull_policy: never
@@ -82,8 +96,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-
-  # Blobcast REST API (uses shared image)
   blobcast-api:
     image: blobcast:latest
     pull_policy: never
@@ -106,8 +118,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-
-  # Blobcast Indexer (uses shared image)
   blobcast-indexer:
     image: blobcast:latest
     pull_policy: never
@@ -115,15 +125,14 @@ services:
     command: |
       indexer start
       --node-grpc blobcast-node:50051
-    volumes:
-      - blobcast_data:/app/blobcast
+      --db-conn postgres://postgres:secret@postgres/postgres?sslmode=disable
     networks:
       - blobcast-network
     depends_on:
       blobcast-node:
         condition: service_healthy
-
-  # Blobcast Explorer (uses shared image)
+      postgres:
+        condition: service_healthy
   blobcast-explorer:
     image: blobcast:latest
     pull_policy: never
@@ -132,16 +141,14 @@ services:
       explorer start
       --addr 0.0.0.0
       --port 8082
-      --indexer-db /app/blobcast/.blobcast/mocha/indexer.db
+      --db-conn postgres://postgres:secret@postgres/postgres?sslmode=disable
       --gateway-url http://localhost:8080
     ports:
       - "8082:8082"
-    volumes:
-      - blobcast_data:/app/blobcast
     networks:
       - blobcast-network
     depends_on:
-      blobcast-node:
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8082"]
@@ -154,6 +161,8 @@ volumes:
   celestia_data:
     driver: local
   blobcast_data:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:

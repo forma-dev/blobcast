@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 type BlockIndex struct {
@@ -92,21 +92,20 @@ type IndexerDatabase struct {
 	db *sql.DB
 }
 
-func NewIndexerDatabase(indexerDbPath string) (*IndexerDatabase, error) {
-	if indexerDbPath == "" {
-		var err error
-		indexerDbPath, err = getStateDbPath(IndexerStateDb)
-		if err != nil {
-			return nil, fmt.Errorf("error getting indexer database path: %v", err)
-		}
-	}
-	slog.Info("opening indexer database", "path", indexerDbPath)
+func NewIndexerDatabase(connectionString string) (*IndexerDatabase, error) {
+	slog.Info("connecting to indexer database")
 
-	// Open with WAL mode for better concurrent access
-	db, err := sql.Open("sqlite3", indexerDbPath+"?_journal_mode=WAL&_foreign_keys=on")
+	// PostgreSQL connection string format
+	// Expected format: "postgres://username:password@localhost/dbname?sslmode=disable"
+	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		return nil, fmt.Errorf("error opening indexer database: %v", err)
 	}
+
+	// Set connection pool settings for PostgreSQL
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	idb := &IndexerDatabase{db: db}
 	if err := idb.initSchema(); err != nil {
@@ -123,12 +122,12 @@ func (idb *IndexerDatabase) Close() error {
 func (idb *IndexerDatabase) initSchema() error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS blocks (
-		height INTEGER PRIMARY KEY,
+		height BIGSERIAL PRIMARY KEY,
 		version INTEGER NOT NULL DEFAULT 1,
 		chain_id TEXT NOT NULL DEFAULT '',
 		hash TEXT NOT NULL,
-		timestamp DATETIME NOT NULL,
-		celestia_height INTEGER NOT NULL,
+		timestamp TIMESTAMP NOT NULL,
+		celestia_height BIGINT NOT NULL,
 		parent_hash TEXT NOT NULL DEFAULT '',
 		dirs_root TEXT NOT NULL DEFAULT '',
 		files_root TEXT NOT NULL DEFAULT '',
@@ -137,18 +136,19 @@ func (idb *IndexerDatabase) initSchema() error {
 		total_chunks INTEGER NOT NULL,
 		total_files INTEGER NOT NULL,
 		total_directories INTEGER NOT NULL,
-		storage_used INTEGER NOT NULL DEFAULT 0
+		storage_used BIGINT NOT NULL DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS files (
 		blob_id TEXT PRIMARY KEY,
 		filename TEXT NOT NULL,
 		mime_type TEXT,
-		file_size INTEGER NOT NULL,
+		file_size BIGINT NOT NULL,
 		file_hash TEXT NOT NULL,
-		block_height INTEGER NOT NULL,
+		block_height BIGINT NOT NULL,
 		chunk_count INTEGER NOT NULL,
 		tags TEXT, -- JSON array as string
+		filename_search tsvector, -- Full-text search vector
 		FOREIGN KEY (block_height) REFERENCES blocks(height)
 	);
 
@@ -156,11 +156,12 @@ func (idb *IndexerDatabase) initSchema() error {
 		blob_id TEXT PRIMARY KEY,
 		directory_name TEXT NOT NULL,
 		directory_hash TEXT NOT NULL,
-		block_height INTEGER NOT NULL,
+		block_height BIGINT NOT NULL,
 		file_count INTEGER NOT NULL,
-		total_size INTEGER NOT NULL,
+		total_size BIGINT NOT NULL,
 		file_types TEXT, -- JSON array as string
 		sub_paths TEXT,  -- JSON array as string
+		directory_search tsvector, -- Full-text search vector
 		FOREIGN KEY (block_height) REFERENCES blocks(height)
 	);
 
@@ -169,14 +170,15 @@ func (idb *IndexerDatabase) initSchema() error {
 		file_id TEXT NOT NULL,
 		relative_path TEXT NOT NULL,
 		FOREIGN KEY (directory_id) REFERENCES directories(blob_id),
-		FOREIGN KEY (file_id) REFERENCES files(blob_id)
+		FOREIGN KEY (file_id) REFERENCES files(blob_id),
+		UNIQUE(directory_id, file_id)
 	);
 
 	CREATE TABLE IF NOT EXISTS chunks (
 		blob_id TEXT PRIMARY KEY,
-		block_height INTEGER NOT NULL,
+		block_height BIGINT NOT NULL,
 		chunk_index INTEGER NOT NULL,
-		chunk_size INTEGER NOT NULL,
+		chunk_size BIGINT NOT NULL,
 		chunk_hash TEXT NOT NULL,
 		FOREIGN KEY (block_height) REFERENCES blocks(height)
 	);
@@ -186,7 +188,8 @@ func (idb *IndexerDatabase) initSchema() error {
 		chunk_id TEXT NOT NULL,
 		chunk_index INTEGER NOT NULL,
 		FOREIGN KEY (file_id) REFERENCES files(blob_id),
-		FOREIGN KEY (chunk_id) REFERENCES chunks(blob_id)
+		FOREIGN KEY (chunk_id) REFERENCES chunks(blob_id),
+		UNIQUE(file_id, chunk_id)
 	);
 
 	-- Indexes for common queries
@@ -197,45 +200,33 @@ func (idb *IndexerDatabase) initSchema() error {
 	CREATE INDEX IF NOT EXISTS idx_blocks_timestamp ON blocks(timestamp);
 	CREATE INDEX IF NOT EXISTS idx_chunks_block_height ON chunks(block_height);
 
-	-- Full-text search tables
-	CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
-		filename,
-		content='files',
-		content_rowid='rowid'
-	);
+	-- Full-text search indexes using PostgreSQL's built-in text search
+	CREATE INDEX IF NOT EXISTS idx_files_filename_search ON files USING GIN(filename_search);
+	CREATE INDEX IF NOT EXISTS idx_directories_name_search ON directories USING GIN(directory_search);
 
-	CREATE VIRTUAL TABLE IF NOT EXISTS directories_fts USING fts5(
-		directory_name,
-		content='directories',
-		content_rowid='rowid'
-	);
+	-- Function to update search vectors
+	CREATE OR REPLACE FUNCTION update_files_search_vector() RETURNS trigger AS $$
+	BEGIN
+		NEW.filename_search := to_tsvector('english', NEW.filename);
+		RETURN NEW;
+	END
+	$$ LANGUAGE plpgsql;
 
-	-- Triggers to keep FTS tables in sync
-	CREATE TRIGGER IF NOT EXISTS files_fts_insert AFTER INSERT ON files BEGIN
-		INSERT INTO files_fts(rowid, filename) VALUES (new.rowid, new.filename);
-	END;
+	CREATE OR REPLACE FUNCTION update_directories_search_vector() RETURNS trigger AS $$
+	BEGIN
+		NEW.directory_search := to_tsvector('english', NEW.directory_name);
+		RETURN NEW;
+	END
+	$$ LANGUAGE plpgsql;
 
-	CREATE TRIGGER IF NOT EXISTS files_fts_delete AFTER DELETE ON files BEGIN
-		DELETE FROM files_fts WHERE rowid = old.rowid;
-	END;
+	-- Triggers to keep search vectors up to date
+	DROP TRIGGER IF EXISTS files_search_update ON files;
+	CREATE TRIGGER files_search_update BEFORE INSERT OR UPDATE ON files
+		FOR EACH ROW EXECUTE FUNCTION update_files_search_vector();
 
-	CREATE TRIGGER IF NOT EXISTS files_fts_update AFTER UPDATE ON files BEGIN
-		DELETE FROM files_fts WHERE rowid = old.rowid;
-		INSERT INTO files_fts(rowid, filename) VALUES (new.rowid, new.filename);
-	END;
-
-	CREATE TRIGGER IF NOT EXISTS directories_fts_insert AFTER INSERT ON directories BEGIN
-		INSERT INTO directories_fts(rowid, directory_name) VALUES (new.rowid, new.directory_name);
-	END;
-
-	CREATE TRIGGER IF NOT EXISTS directories_fts_delete AFTER DELETE ON directories BEGIN
-		DELETE FROM directories_fts WHERE rowid = old.rowid;
-	END;
-
-	CREATE TRIGGER IF NOT EXISTS directories_fts_update AFTER UPDATE ON directories BEGIN
-		DELETE FROM directories_fts WHERE rowid = old.rowid;
-		INSERT INTO directories_fts(rowid, directory_name) VALUES (new.rowid, new.directory_name);
-	END;
+	DROP TRIGGER IF EXISTS directories_search_update ON directories;
+	CREATE TRIGGER directories_search_update BEFORE INSERT OR UPDATE ON directories
+		FOR EACH ROW EXECUTE FUNCTION update_directories_search_vector();
 	`
 
 	_, err := idb.db.Exec(schema)
@@ -244,9 +235,22 @@ func (idb *IndexerDatabase) initSchema() error {
 
 func (idb *IndexerDatabase) PutBlockIndex(block *BlockIndex) error {
 	query := `
-	INSERT OR REPLACE INTO blocks 
+	INSERT INTO blocks 
 	(height, hash, timestamp, celestia_height, total_chunks, total_files, total_directories, storage_used, parent_hash, dirs_root, files_root, chunks_root, state_root)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	ON CONFLICT (height) DO UPDATE SET
+		hash = EXCLUDED.hash,
+		timestamp = EXCLUDED.timestamp,
+		celestia_height = EXCLUDED.celestia_height,
+		total_chunks = EXCLUDED.total_chunks,
+		total_files = EXCLUDED.total_files,
+		total_directories = EXCLUDED.total_directories,
+		storage_used = EXCLUDED.storage_used,
+		parent_hash = EXCLUDED.parent_hash,
+		dirs_root = EXCLUDED.dirs_root,
+		files_root = EXCLUDED.files_root,
+		chunks_root = EXCLUDED.chunks_root,
+		state_root = EXCLUDED.state_root
 	`
 
 	_, err := idb.db.Exec(query,
@@ -272,7 +276,7 @@ func (idb *IndexerDatabase) GetBlockIndex(height uint64) (*BlockIndex, error) {
 	query := `
 	SELECT height, hash, timestamp, celestia_height, total_chunks, total_files, total_directories, storage_used, parent_hash, dirs_root, files_root, chunks_root, state_root
 	FROM blocks 
-	WHERE height = ?
+	WHERE height = $1
 	`
 
 	var block BlockIndex
@@ -301,9 +305,17 @@ func (idb *IndexerDatabase) GetBlockIndex(height uint64) (*BlockIndex, error) {
 
 func (idb *IndexerDatabase) PutFileIndex(file *FileIndex) error {
 	query := `
-	INSERT OR REPLACE INTO files 
+	INSERT INTO files 
 	(blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	ON CONFLICT (blob_id) DO UPDATE SET
+		filename = EXCLUDED.filename,
+		mime_type = EXCLUDED.mime_type,
+		file_size = EXCLUDED.file_size,
+		file_hash = EXCLUDED.file_hash,
+		block_height = EXCLUDED.block_height,
+		chunk_count = EXCLUDED.chunk_count,
+		tags = EXCLUDED.tags
 	`
 
 	// Convert tags to JSON string (simple implementation)
@@ -325,8 +337,10 @@ func (idb *IndexerDatabase) PutFileIndex(file *FileIndex) error {
 
 func (idb *IndexerDatabase) PutFileChunk(fileID string, chunkID string, chunkIndex int) error {
 	query := `
-	INSERT OR REPLACE INTO file_chunks (file_id, chunk_id, chunk_index)
-	VALUES (?, ?, ?)
+	INSERT INTO file_chunks (file_id, chunk_id, chunk_index)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (file_id, chunk_id) DO UPDATE SET
+		chunk_index = EXCLUDED.chunk_index
 	`
 
 	_, err := idb.db.Exec(query, fileID, chunkID, chunkIndex)
@@ -337,7 +351,7 @@ func (idb *IndexerDatabase) GetFileIndex(blobID string) (*FileIndex, error) {
 	query := `
 	SELECT blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags
 	FROM files 
-	WHERE blob_id = ?
+	WHERE blob_id = $1
 	`
 
 	var file FileIndex
@@ -371,7 +385,7 @@ func (idb *IndexerDatabase) GetFileChunks(fileID string) ([]*ChunkIndex, error) 
 	SELECT chunks.blob_id, file_chunks.chunk_index, chunks.block_height, chunks.chunk_size, chunks.chunk_hash
 	FROM file_chunks
 	JOIN chunks ON file_chunks.chunk_id = chunks.blob_id
-	WHERE file_id = ?
+	WHERE file_id = $1
 	ORDER BY file_chunks.chunk_index ASC
 	`
 
@@ -396,9 +410,17 @@ func (idb *IndexerDatabase) GetFileChunks(fileID string) ([]*ChunkIndex, error) 
 
 func (idb *IndexerDatabase) PutDirectoryIndex(dir *DirectoryIndex) error {
 	query := `
-	INSERT OR REPLACE INTO directories 
+	INSERT INTO directories 
 	(blob_id, directory_name, directory_hash, block_height, file_count, total_size, file_types, sub_paths)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	ON CONFLICT (blob_id) DO UPDATE SET
+		directory_name = EXCLUDED.directory_name,
+		directory_hash = EXCLUDED.directory_hash,
+		block_height = EXCLUDED.block_height,
+		file_count = EXCLUDED.file_count,
+		total_size = EXCLUDED.total_size,
+		file_types = EXCLUDED.file_types,
+		sub_paths = EXCLUDED.sub_paths
 	`
 
 	// Convert slices to JSON strings (simple implementation)
@@ -421,8 +443,10 @@ func (idb *IndexerDatabase) PutDirectoryIndex(dir *DirectoryIndex) error {
 
 func (idb *IndexerDatabase) PutDirectoryFile(directoryID string, fileID string, relativePath string) error {
 	query := `
-	INSERT OR REPLACE INTO directory_files (directory_id, file_id, relative_path)
-	VALUES (?, ?, ?)
+	INSERT INTO directory_files (directory_id, file_id, relative_path)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (directory_id, file_id) DO UPDATE SET
+		relative_path = EXCLUDED.relative_path
 	`
 
 	_, err := idb.db.Exec(query, directoryID, fileID, relativePath)
@@ -431,31 +455,53 @@ func (idb *IndexerDatabase) PutDirectoryFile(directoryID string, fileID string, 
 
 // SearchFiles searches for files by filename with optional filters
 func (idb *IndexerDatabase) SearchFiles(query string, filters FileFilters, limit, offset int) ([]*FileIndex, error) {
-	sqlQuery := `
-	SELECT blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags
-	FROM files 
-	WHERE filename LIKE ?
-	`
-	args := []interface{}{"%" + query + "%"}
+	var sqlQuery string
+	var args []interface{}
+	paramCount := 0
+
+	// Use full-text search if available, otherwise fall back to LIKE
+	if strings.TrimSpace(query) != "" {
+		sqlQuery = `
+		SELECT blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags
+		FROM files 
+		WHERE (filename_search @@ plainto_tsquery('english', $1) OR filename ILIKE $2)
+		`
+		paramCount = 2
+		args = []interface{}{query, "%" + query + "%"}
+	} else {
+		sqlQuery = `
+		SELECT blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags
+		FROM files 
+		WHERE 1=1
+		`
+	}
 
 	// Add filters
 	if filters.MimeType != "" {
-		sqlQuery += " AND mime_type = ?"
+		paramCount++
+		sqlQuery += fmt.Sprintf(" AND mime_type = $%d", paramCount)
 		args = append(args, filters.MimeType)
 	}
 
 	if filters.MinSize > 0 {
-		sqlQuery += " AND file_size >= ?"
+		paramCount++
+		sqlQuery += fmt.Sprintf(" AND file_size >= $%d", paramCount)
 		args = append(args, filters.MinSize)
 	}
 
 	if filters.MaxSize > 0 {
-		sqlQuery += " AND file_size <= ?"
+		paramCount++
+		sqlQuery += fmt.Sprintf(" AND file_size <= $%d", paramCount)
 		args = append(args, filters.MaxSize)
 	}
 
-	sqlQuery += " ORDER BY block_height DESC LIMIT ? OFFSET ?"
-	args = append(args, limit, offset)
+	paramCount++
+	sqlQuery += fmt.Sprintf(" ORDER BY block_height DESC LIMIT $%d", paramCount)
+	args = append(args, limit)
+
+	paramCount++
+	sqlQuery += fmt.Sprintf(" OFFSET $%d", paramCount)
+	args = append(args, offset)
 
 	rows, err := idb.db.Query(sqlQuery, args...)
 	if err != nil {
@@ -582,7 +628,7 @@ func (idb *IndexerDatabase) GetBlocks(limit, offset int) ([]*BlockIndex, error) 
 	SELECT height, hash, timestamp, celestia_height, total_chunks, total_files, total_directories, storage_used, parent_hash, dirs_root, files_root, chunks_root, state_root
 	FROM blocks 
 	ORDER BY height DESC 
-	LIMIT ? OFFSET ?
+	LIMIT $1 OFFSET $2
 	`
 
 	rows, err := idb.db.Query(query, limit, offset)
@@ -631,7 +677,7 @@ func (idb *IndexerDatabase) GetFiles(limit, offset int) ([]*FileIndex, error) {
 	SELECT blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags
 	FROM files 
 	ORDER BY block_height DESC 
-	LIMIT ? OFFSET ?
+	LIMIT $1 OFFSET $2
 	`
 
 	rows, err := idb.db.Query(query, limit, offset)
@@ -683,7 +729,7 @@ func (idb *IndexerDatabase) GetDirectories(limit, offset int) ([]*DirectoryIndex
 	SELECT blob_id, directory_name, directory_hash, block_height, file_count, total_size, file_types, sub_paths
 	FROM directories 
 	ORDER BY block_height DESC 
-	LIMIT ? OFFSET ?
+	LIMIT $1 OFFSET $2
 	`
 
 	rows, err := idb.db.Query(query, limit, offset)
@@ -737,7 +783,7 @@ func (idb *IndexerDatabase) GetDirectoryByID(blobID string) (*DirectoryIndex, er
 	query := `
 	SELECT blob_id, directory_name, directory_hash, block_height, file_count, total_size, file_types, sub_paths
 	FROM directories 
-	WHERE blob_id = ?
+	WHERE blob_id = $1
 	`
 
 	var dir DirectoryIndex
@@ -774,7 +820,7 @@ func (idb *IndexerDatabase) GetFilesByBlockHeight(blockHeight uint64) ([]*FileIn
 	query := `
 	SELECT blob_id, filename, mime_type, file_size, file_hash, block_height, chunk_count, tags
 	FROM files 
-	WHERE block_height = ?
+	WHERE block_height = $1
 	ORDER BY filename
 	`
 
@@ -819,7 +865,7 @@ func (idb *IndexerDatabase) GetDirectoriesByBlockHeight(blockHeight uint64) ([]*
 	query := `
 	SELECT blob_id, directory_name, directory_hash, block_height, file_count, total_size, file_types, sub_paths
 	FROM directories 
-	WHERE block_height = ?
+	WHERE block_height = $1
 	ORDER BY directory_name
 	`
 
@@ -865,9 +911,14 @@ func (idb *IndexerDatabase) GetDirectoriesByBlockHeight(blockHeight uint64) ([]*
 // PutChunkIndex stores a chunk index
 func (idb *IndexerDatabase) PutChunkIndex(chunk *ChunkIndex) error {
 	query := `
-	INSERT OR REPLACE INTO chunks 
+	INSERT INTO chunks 
 	(blob_id, block_height, chunk_index, chunk_size, chunk_hash)
-	VALUES (?, ?, ?, ?, ?)
+	VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT (blob_id) DO UPDATE SET
+		block_height = EXCLUDED.block_height,
+		chunk_index = EXCLUDED.chunk_index,
+		chunk_size = EXCLUDED.chunk_size,
+		chunk_hash = EXCLUDED.chunk_hash
 	`
 
 	_, err := idb.db.Exec(query,
@@ -886,7 +937,7 @@ func (idb *IndexerDatabase) GetChunksByBlockHeight(blockHeight uint64) ([]*Chunk
 	query := `
 	SELECT blob_id, block_height, chunk_index, chunk_size, chunk_hash
 	FROM chunks 
-	WHERE block_height = ?
+	WHERE block_height = $1
 	ORDER BY chunk_index
 	`
 

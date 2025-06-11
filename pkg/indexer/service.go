@@ -29,8 +29,9 @@ func NewIndexerService(
 	storageClient pbStorageapisV1.StorageServiceClient,
 	rollupClient pbRollupapisV1.RollupServiceClient,
 	startHeight uint64,
+	dbConnString string,
 ) (*IndexerService, error) {
-	indexDB, err := state.NewIndexerDatabase("")
+	indexDB, err := state.NewIndexerDatabase(dbConnString)
 	if err != nil {
 		return nil, fmt.Errorf("error creating index database: %v", err)
 	}

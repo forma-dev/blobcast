@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/forma-dev/blobcast/cmd"
@@ -23,24 +21,15 @@ var startCmd = &cobra.Command{
 }
 
 func init() {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		homeDir = ""
-	}
-
-	defaultIndexerDb := filepath.Join(homeDir, ".blobcast", "mocha", "indexer.db")
-
 	explorerCmd.AddCommand(startCmd)
 	startCmd.Flags().StringVarP(&flagAddr, "addr", "a", "127.0.0.1", "Address to listen on")
 	startCmd.Flags().StringVarP(&flagPort, "port", "p", "8082", "Port to listen on")
-	startCmd.Flags().
-		StringVar(&flagIndexerDb, "indexer-db", cmd.GetEnvWithDefault("BLOBCAST_INDEXER_DB", defaultIndexerDb), "Path to the indexer database")
 	startCmd.Flags().
 		StringVar(&flagGatewayUrl, "gateway-url", cmd.GetEnvWithDefault("BLOBCAST_GATEWAY_URL", "http://localhost:8080"), "URL of the blobcast gateway")
 }
 
 func runStart(command *cobra.Command, args []string) error {
-	indexDB, err := state.NewIndexerDatabase(flagIndexerDb)
+	indexDB, err := state.NewIndexerDatabase(flagDbConnString)
 	if err != nil {
 		return fmt.Errorf("error connecting to indexer database: %v", err)
 	}

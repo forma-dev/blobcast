@@ -8,7 +8,6 @@ import (
 
 	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/indexer"
-	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -64,30 +63,7 @@ func runStart(command *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 
-	chainInfo, err := rollupClient.GetChainInfo(ctx, &pbRollupapisV1.GetChainInfoRequest{})
-	if err != nil {
-		return fmt.Errorf("error getting chain info: %v", err)
-	}
-
-	var activeNetwork string
-	switch chainInfo.ChainId {
-	case state.ChainIDMocha:
-		activeNetwork = "mocha"
-	case state.ChainIDMammoth:
-		activeNetwork = "mammoth"
-	case state.ChainIDCelestia:
-		activeNetwork = "celestia"
-	default:
-		return fmt.Errorf("unsupported chain ID: %s", chainInfo.ChainId)
-	}
-
-	slog.Info("Initializing with celestia network", "network", activeNetwork)
-	state.SetNetwork(activeNetwork)
-
-	slog.Info("Initializing with app data directory", "data_dir", flagDataDir)
-	state.SetDataDir(flagDataDir)
-
-	indexerService, err := indexer.NewIndexerService(storageClient, rollupClient, flagStartHeight)
+	indexerService, err := indexer.NewIndexerService(storageClient, rollupClient, flagStartHeight, flagDbConnString)
 	if err != nil {
 		return fmt.Errorf("error creating indexer service: %v", err)
 	}

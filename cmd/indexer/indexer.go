@@ -1,15 +1,12 @@
 package indexer
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/forma-dev/blobcast/cmd"
 	"github.com/spf13/cobra"
 )
 
 var (
-	flagDataDir      string
+	flagDbConnString string
 	flagNodeGRPC     string
 	flagStartHeight  uint64
 	flagSyncInterval string
@@ -24,14 +21,6 @@ var indexerCmd = &cobra.Command{
 func init() {
 	cmd.RootCmd.AddCommand(indexerCmd)
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		homeDir = ""
-	}
-
-	defaultAppDataDir := filepath.Join(homeDir, ".blobcast")
-
 	indexerCmd.PersistentFlags().
-		StringVar(&flagDataDir, "data-dir", cmd.GetEnvWithDefault("BLOBCAST_DATA_DIR", defaultAppDataDir), "Path to the app data directory")
-
+		StringVar(&flagDbConnString, "db-conn", cmd.GetEnvWithDefault("BLOBCAST_DB_CONNECTION_STRING", "postgres://postgres:secret@127.0.0.1:5432/postgres?sslmode=disable"), "Connection string for the indexer database")
 }
