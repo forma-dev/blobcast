@@ -8,10 +8,8 @@ import (
 
 	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/indexer"
+	"github.com/forma-dev/blobcast/pkg/util"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 
 	pbRollupapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1"
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
@@ -41,20 +39,9 @@ func runStart(command *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid sync interval: %v", err)
 	}
 
-	keepaliveParams := keepalive.ClientParameters{
-		Time:                15 * time.Minute,
-		Timeout:             60 * time.Second,
-		PermitWithoutStream: true,
-	}
-
-	conn, err := grpc.NewClient(
-		flagNodeGRPC,
-		grpc.WithKeepaliveParams(keepaliveParams),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)),
-	)
+	conn, err := util.NewGRPCClient(flagNodeGRPC)
 	if err != nil {
-		return fmt.Errorf("error creating connection to node: %v", err)
+		return fmt.Errorf("error creating gRPC client: %v", err)
 	}
 	defer conn.Close()
 

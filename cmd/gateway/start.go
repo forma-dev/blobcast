@@ -9,16 +9,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/crypto"
 	"github.com/forma-dev/blobcast/pkg/net/middleware"
 	"github.com/forma-dev/blobcast/pkg/types"
+	"github.com/forma-dev/blobcast/pkg/util"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
@@ -38,20 +35,9 @@ func init() {
 }
 
 func runStart(command *cobra.Command, args []string) error {
-	// initialize storage client
-	keepaliveParams := keepalive.ClientParameters{
-		Time:                15 * time.Minute,
-		Timeout:             60 * time.Second,
-		PermitWithoutStream: true,
-	}
-	conn, err := grpc.NewClient(
-		flagNodeGRPC,
-		grpc.WithKeepaliveParams(keepaliveParams),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)), // 1GB for now
-	)
+	conn, err := util.NewGRPCClient(flagNodeGRPC)
 	if err != nil {
-		return fmt.Errorf("error creating storage client: %v", err)
+		return fmt.Errorf("error creating gRPC client: %v", err)
 	}
 	defer conn.Close()
 

@@ -7,17 +7,14 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 	"github.com/forma-dev/blobcast/pkg/sync"
 	"github.com/forma-dev/blobcast/pkg/types"
+	"github.com/forma-dev/blobcast/pkg/util"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 )
 
 var exportCmd = &cobra.Command{
@@ -75,20 +72,10 @@ func runExport(command *cobra.Command, args []string) error {
 		return fmt.Errorf("error parsing manifest identifier: %v", err)
 	}
 
-	// initialize storage client
-	keepaliveParams := keepalive.ClientParameters{
-		Time:                15 * time.Minute,
-		Timeout:             60 * time.Second,
-		PermitWithoutStream: true,
-	}
-	conn, err := grpc.NewClient(
-		flagNodeGRPC,
-		grpc.WithKeepaliveParams(keepaliveParams),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*1024)), // 1GB for now
-	)
+	// initialize gRPC client
+	conn, err := util.NewGRPCClient(flagNodeGRPC)
 	if err != nil {
-		return fmt.Errorf("error creating storage client: %v", err)
+		return fmt.Errorf("error creating gRPC client: %v", err)
 	}
 	defer conn.Close()
 
