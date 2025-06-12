@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/forma-dev/blobcast/pkg/celestia"
 	"github.com/forma-dev/blobcast/pkg/crypto"
@@ -175,7 +176,9 @@ func (c *FileSystemClient) UploadFile(
 		slog.Debug("Encrypted file", "file_name", relativePath, "file_size", len(data), "encrypted_size", len(dataToProcess))
 	}
 
-	blobIdentifier, fileHash, err := PutFileData(ctx, c.da, relativePath, dataToProcess, maxBlobSize)
+	submitter := GetSubmitter(c.da)
+
+	blobIdentifier, fileHash, err := PutFileData(ctx, submitter, relativePath, dataToProcess, maxBlobSize)
 	if err != nil {
 		return nil, fileHash, fmt.Errorf("error putting file data: %v", err)
 	}
@@ -275,19 +278,54 @@ func (c *FileSystemClient) UploadDirectory(
 	var fileHashes map[string]crypto.Hash = make(map[string]crypto.Hash)
 
 	// Upload files
+	uploadCtx, uploadCancel := context.WithCancel(ctx)
+	defer uploadCancel()
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var uploadErr error
+
 	for _, file := range filesToUpload {
-		blobIdentifier, fileHash, err := c.UploadFile(ctx, file.path, filepath.Base(file.path), maxBlobSize, encryptionKey)
-		if err != nil {
-			return nil, crypto.Hash{}, fmt.Errorf("error uploading file %s: %v", file.path, err)
-		}
+		wg.Add(1)
+		go func(f struct {
+			path    string
+			relPath string
+		}) {
+			defer wg.Done()
 
-		// hash with relative path to ensure unique directories with same files have different hashes
-		fileHashes[file.relPath] = crypto.HashBytes([]byte(file.relPath), fileHash[:])
+			select {
+			case <-uploadCtx.Done():
+				return
+			default:
+			}
 
-		dirManifest.Files = append(dirManifest.Files, &pbStorageV1.FileReference{
-			Id:           blobIdentifier.Proto(),
-			RelativePath: file.relPath,
-		})
+			blobIdentifier, fileHash, err := c.UploadFile(ctx, f.path, filepath.Base(f.path), maxBlobSize, encryptionKey)
+			if err != nil {
+				mu.Lock()
+				uploadErr = fmt.Errorf("error uploading file %s: %v", f.path, err)
+				uploadCancel()
+				mu.Unlock()
+				return
+			}
+
+			mu.Lock()
+
+			// hash with relative path to ensure unique directories with same files have different hashes
+			fileHashes[file.relPath] = crypto.HashBytes([]byte(f.relPath), fileHash[:])
+
+			dirManifest.Files = append(dirManifest.Files, &pbStorageV1.FileReference{
+				Id:           blobIdentifier.Proto(),
+				RelativePath: f.relPath,
+			})
+
+			mu.Unlock()
+		}(file)
+	}
+
+	wg.Wait()
+
+	if uploadErr != nil {
+		return nil, crypto.Hash{}, uploadErr
 	}
 
 	// Calculate a hash for the entire directory by combining all file hashes

@@ -36,7 +36,7 @@ func PutDirectoryManifest(ctx context.Context, da celestia.BlobStore, directoryM
 	}, nil
 }
 
-func PutFileManifest(ctx context.Context, da celestia.BlobStore, fileManifest *pbStorageV1.FileManifest) (*types.BlobIdentifier, error) {
+func PutFileManifest(ctx context.Context, submitter *Submitter, fileManifest *pbStorageV1.FileManifest) (*types.BlobIdentifier, error) {
 	blobcastEnvelope := &pbRollupV1.BlobcastEnvelope{
 		Payload: &pbRollupV1.BlobcastEnvelope_FileManifest{
 			FileManifest: fileManifest,
@@ -48,13 +48,18 @@ func PutFileManifest(ctx context.Context, da celestia.BlobStore, fileManifest *p
 		return nil, fmt.Errorf("error marshalling file manifest into blobcast envelope: %v", err)
 	}
 
-	fileManifestCommitment, fileManifestHeight, err := da.Store(ctx, blobcastEnvelopeData)
-	if err != nil {
-		return nil, fmt.Errorf("error submitting file manifest to Celestia: %v", err)
+	submissionResult := submitter.SubmitWithPriority(blobcastEnvelopeData)
+
+	var fileId *types.BlobIdentifier
+	select {
+	case result := <-submissionResult:
+		if result.Error != nil {
+			return nil, fmt.Errorf("error submitting file manifest: %v", result.Error)
+		}
+		fileId = result.BlobID
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context cancelled while waiting for file manifest submission")
 	}
 
-	return &types.BlobIdentifier{
-		Height:     fileManifestHeight,
-		Commitment: crypto.Hash(fileManifestCommitment),
-	}, nil
+	return fileId, nil
 }
