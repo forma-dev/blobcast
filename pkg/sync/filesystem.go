@@ -276,7 +276,7 @@ func (c *FileSystemClient) UploadDirectory(
 
 	// Upload files
 	for _, file := range filesToUpload {
-		blobIdentifier, fileHash, err := c.UploadFile(ctx, file.path, file.relPath, maxBlobSize, encryptionKey)
+		blobIdentifier, fileHash, err := c.UploadFile(ctx, file.path, filepath.Base(file.path), maxBlobSize, encryptionKey)
 		if err != nil {
 			return nil, crypto.Hash{}, fmt.Errorf("error uploading file %s: %v", file.path, err)
 		}
