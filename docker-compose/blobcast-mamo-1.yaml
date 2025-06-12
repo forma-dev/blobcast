@@ -1,0 +1,168 @@
+version: '3.8'
+
+services:
+  celestia:
+    image: ghcr.io/celestiaorg/celestia-node:v0.21.9-mammoth-v0.0.16
+    container_name: celestia-light
+    command: |
+      sh -c '
+      if [ ! -f /home/celestia/.initialized ]; then
+        echo "Initializing Celestia light node..."
+        celestia light init --p2p.network mammoth
+        sed -i "s/SampleFrom = .*/SampleFrom = 1140775/" /home/celestia/config.toml
+        sed -i "s/TrustedHash = .*/TrustedHash = \"118A022ED75DBD2EAE49102C8F7A30707877B419BFE9D8145C2CE2919701B7A1\"/" /home/celestia/config.toml
+        touch /home/celestia/.initialized
+      fi
+      echo "Starting Celestia light node..."
+      celestia light start --p2p.network mammoth --core.ip global.grpc.mamochain.com --core.port 9090 --rpc.skip-auth --rpc.addr 0.0.0.0 --rpc.port 26658
+      '
+    volumes:
+      - blobcast_mamo_celestia_data:/home/celestia
+    networks:
+      - blobcast-mamo-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "26658"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - blobcast-mamo-network
+    volumes:
+      - blobcast_mamo_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  blobcast-node:
+    build:
+      context: ..
+    image: blobcast:latest
+    pull_policy: never
+    container_name: blobcast-node
+    command: |
+      node start
+      --celestia-rpc ws://celestia:26658
+      --celestia-auth ""
+      --grpc-address 0.0.0.0
+      --grpc-port 50051
+      --network mammoth
+      --verbose
+    volumes:
+      - blobcast_mamo_data:/app/blobcast
+    networks:
+      - blobcast-mamo-network
+    depends_on:
+      celestia:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  blobcast-gateway:
+    image: blobcast:latest
+    pull_policy: never
+    container_name: blobcast-gateway
+    command: |
+      gateway start
+      --addr 0.0.0.0
+      --port 8080
+      --node-grpc blobcast-node:50051
+    ports:
+      - "8080:8080"
+    networks:
+      - blobcast-mamo-network
+    depends_on:
+      blobcast-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  blobcast-api:
+    image: blobcast:latest
+    pull_policy: never
+    container_name: blobcast-api
+    command: |
+      api start
+      --addr 0.0.0.0
+      --port 8081
+      --node-grpc blobcast-node:50051
+    ports:
+      - "8081:8081"
+    networks:
+      - blobcast-mamo-network
+    depends_on:
+      blobcast-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  blobcast-indexer:
+    image: blobcast:latest
+    pull_policy: never
+    container_name: blobcast-indexer
+    command: |
+      indexer start
+      --node-grpc blobcast-node:50051
+      --db-conn postgres://postgres:secret@postgres/postgres?sslmode=disable
+    networks:
+      - blobcast-mamo-network
+    depends_on:
+      blobcast-node:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+  blobcast-explorer:
+    image: blobcast:latest
+    pull_policy: never
+    container_name: blobcast-explorer
+    command: |
+      explorer start
+      --addr 0.0.0.0
+      --port 8082
+      --db-conn postgres://postgres:secret@postgres/postgres?sslmode=disable
+      --gateway-url http://localhost:8080
+    ports:
+      - "8082:8082"
+    networks:
+      - blobcast-mamo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8082"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  blobcast_mamo_celestia_data:
+    driver: local
+  blobcast_mamo_data:
+    driver: local
+  blobcast_mamo_postgres_data:
+    driver: local
+
+networks:
+  blobcast-mamo-network:
+    driver: bridge
