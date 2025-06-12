@@ -83,7 +83,7 @@ func (mmr *MMR) Snapshot() Snapshot {
 }
 
 func (mmr *MMR) Restore(snapshot Snapshot) error {
-	if len(snapshot) < 32 {
+	if len(snapshot) < 24 {
 		return fmt.Errorf("invalid snapshot: expected at least 32 bytes, got %d", len(snapshot))
 	}
 
