@@ -43,8 +43,6 @@ func NewBlobcastChain(ctx context.Context, celestiaDA celestia.BlobStore) (*Blob
 }
 
 func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
-	defer bc.chainState.Close()
-
 	nextHeight := uint64(0)
 
 	celestiaHeightOffset, err := bc.chainState.CelestiaHeightOffset()
