@@ -89,7 +89,7 @@ services:
       blobcast-node:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -111,7 +111,7 @@ services:
       blobcast-node:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      test: ["CMD", "nc", "-z", "localhost", "8081"]
       interval: 30s
       timeout: 10s
       retries: 5

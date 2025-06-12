@@ -16,12 +16,10 @@ services:
       echo "Starting Celestia light node..."
       celestia light start --p2p.network mocha --core.ip rpc-mocha.pops.one --core.port 9090 --rpc.skip-auth --rpc.addr 0.0.0.0 --rpc.port 26658
       '
-    ports:
-      - "26658:26658"
     volumes:
-      - celestia_data:/home/celestia
+      - blobcast_mocha_celestia_data:/home/celestia
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "26658"]
       interval: 30s
@@ -38,9 +36,9 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - blobcast_mocha_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 30s
@@ -59,12 +57,10 @@ services:
       --grpc-address 0.0.0.0
       --grpc-port 50051
       --network mocha
-    ports:
-      - "50051:50051"
     volumes:
-      - blobcast_data:/app/blobcast
+      - blobcast_mocha_data:/app/blobcast
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     depends_on:
       celestia:
         condition: service_healthy
@@ -86,12 +82,12 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     depends_on:
       blobcast-node:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -108,12 +104,12 @@ services:
     ports:
       - "8081:8081"
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     depends_on:
       blobcast-node:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      test: ["CMD", "nc", "-z", "localhost", "8081"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -127,7 +123,7 @@ services:
       --node-grpc blobcast-node:50051
       --db-conn postgres://postgres:secret@postgres/postgres?sslmode=disable
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     depends_on:
       blobcast-node:
         condition: service_healthy
@@ -146,7 +142,7 @@ services:
     ports:
       - "8082:8082"
     networks:
-      - blobcast-network
+      - blobcast-mocha-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,13 +154,13 @@ services:
       start_period: 10s
 
 volumes:
-  celestia_data:
+  blobcast_mocha_celestia_data:
     driver: local
-  blobcast_data:
+  blobcast_mocha_data:
     driver: local
-  postgres_data:
+  blobcast_mocha_postgres_data:
     driver: local
 
 networks:
-  blobcast-network:
+  blobcast-mocha-network:
     driver: bridge
