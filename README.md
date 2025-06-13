@@ -19,49 +19,117 @@ Blobcast is a minimal based rollup for publishing and retrieving files on top of
 
 ---
 
+## Active Networks
+
+### Blobcast Testnet
+
+| Property | Value |
+| ---- | ---- |
+| Chain ID | blobcast-mocha-1 |
+| Explorer | https://explorer.blobcast-mocha-1.forma.art |
+| Gateway | https://gateway.blobcast-mocha-1.forma.art |
+| REST API | https://api.blobcast-mocha-1.forma.art |
+| Node gRPC | https://grpc.blobcast-mocha-1.forma.art |
+
+---
+
 ## Prerequisites
 
-* Go 1.23.6 or higher
 * A running [Celestia node](https://docs.celestia.org/nodes/light-node) (light node is sufficient)
 
 ---
 
-## Quick start (running blobcast-1 on mocha)
+## Install
+
+<details>
+<summary>Install a pre-built binary (recommended)</summary>
 
 ```bash
-# Clone & build
+bash -c "$(curl -sL https://raw.githubusercontent.com/forma-dev/blobcast/refs/heads/main/install.sh)"
+```
+</details>
+
+<details>
+<summary>Building from source</summary>
+
+**Prerequisites:**
+
+* Go 1.23.6 or higher
+* [Just](https://just.systems/man/en/packages.html)
+
+```bash
+# Clone, build, and install
 $ git clone https://github.com/forma-dev/blobcast.git
 $ cd blobcast
-$ go build -o build/bin/blobcast .
+$ just install
+```
+</details>
 
-# Start celestia light node
+## Quick Start: Submitting files
+
+```bash
+# Start celestia light node on mocha testnet
 $ celestia light start \
     --p2p.network mocha \
     --core.ip rpc-mocha.pops.one \
     --core.port 9090 \
     --rpc.skip-auth
 
+# Submit a directory
+$ blobcast files submit --dir ./my-data --verbose
+
+# Submit a file
+$ blobcast files submit --file ./my-file.png --verbose
+
+# View submitted files on the explorer
+$ open https://explorer.blobcast-mocha-1.forma.art/
+
+# Browse files or directories via web gateway
+$ open https://gateway.blobcast-mocha-1.forma.art/bchw4geg5w2xkeh7aciat4iikpevg0ihjnagj5j1yfppw4zex0vxj8sf4lswbllv
+$ open https://gateway.blobcast-mocha-1.forma.art/bckbg87lw3brjt5go3ig522yiy7udjbkofy6fhf6nuqpdz31n41389yn9rdgu1fo
+```
+
+## Quick start: Running a node
+
+```bash
+# Start celestia light node on mocha testnet
+$ celestia light start \
+    --p2p.network mocha \
+    --core.ip rpc-mocha.pops.one \
+    --core.port 9090 \
+    --rpc.skip-auth
+
+# Rapid sync from trusted node
+$ blobcast node sync --remote-grpc-address https://grpc.blobcast-mocha-1.forma.art
+
 # Start blobcast node
-$ ./build/bin/blobcast node start \
+$ blobcast node start \
     --celestia-auth $CELESTIA_NODE_AUTH_TOKEN \
     --celestia-rpc ws://localhost:26658 \
     --verbose
+```
 
+## Quick start: Running gateway & API
+
+```bash
 # Start the web gateway (http://localhost:8080)
-$ ./build/bin/blobcast gateway start
+$ blobcast gateway start
 
 # Start the REST API (http://localhost:8081)
-$ ./build/bin/blobcast api start
+$ blobcast api start
 
-# Submit a directory
-$ ./build/bin/blobcast files submit --dir ./my-data --verbose
+# View submitted files on the explorer
+$ open https://explorer.blobcast-mocha-1.forma.art/
 
-# Submit a file
-$ ./build/bin/blobcast files submit --file ./my-file.png --verbose
-
-# Browse files or directories via web gateway
+# Browse files or directories via local web gateway
 $ open http://localhost:8080/bchw4geg5w2xkeh7aciat4iikpevg0ihjnagj5j1yfppw4zex0vxj8sf4lswbllv
 $ open http://localhost:8080/bckbg87lw3brjt5go3ig522yiy7udjbkofy6fhf6nuqpdz31n41389yn9rdgu1fo
+```
+
+## Quick start: Running all services (via docker-compose)
+
+```bash
+$ docker compose -f ./docker-compose/blobcast-mocha-1.yaml up
 ```
 
 See `docs/cli.md` for a full command reference.
@@ -79,38 +147,6 @@ Blobcast can be configured via command-line flags or environment variables:
 | `BLOBCAST_CELESTIA_NODE_RPC` | `ws://localhost:26658` | Celestia node RPC websocket endpoint |
 | `BLOBCAST_CELESTIA_NODE_AUTH_TOKEN` | - | Celestia node auth token |
 | `BLOBCAST_NODE_GRPC` | `127.0.0.1:50051` | gRPC address for blobcast node |
-
----
-
-## Services
-
-A Blobcast node exposes three services:
-
-1. **gRPC API** (port 50051) - gRPC API for querying chain state
-2. **Web Gateway** (port 8080) - Human-friendly web interface for browsing uploaded files & directories
-3. **REST API** (port 8081) - HTTP/JSON API for integration (see `docs/api/`)
-
----
-
-## Repository layout
-
-```text
-.
-├── cmd/        - CLI commands
-├── pkg/
-│   ├── api/        - REST and node API implementations
-│   ├── celestia/   - Thin wrapper around celestia-node RPC API
-│   ├── crypto/     - Cryptographic utilities (hashing, merkle trees, MMR)
-│   ├── grpc/       - gRPC service implementations (rollup & storage)
-│   ├── proto/      - Generated protobuf Go code
-│   ├── state/      - Pebble-backed local databases (chain, manifests, chunks…)
-│   ├── storage/    - File system storage utilities
-│   ├── sync/       - State machine, uploader & downloader logic
-│   ├── types/      - Core domain types (Block, BlobIdentifier, ...)
-│   └── ...
-├── proto/      - Protobuf definitions
-└── main.go     - Entrypoint
-```
 
 ---
 
