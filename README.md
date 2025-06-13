@@ -103,10 +103,7 @@ $ celestia light start \
 $ blobcast node sync --remote-grpc-address https://grpc.blobcast-mocha-1.forma.art
 
 # Start blobcast node
-$ blobcast node start \
-    --celestia-auth $CELESTIA_NODE_AUTH_TOKEN \
-    --celestia-rpc ws://localhost:26658 \
-    --verbose
+$ blobcast node start --verbose
 ```
 
 ## Quick start: Running gateway & API
