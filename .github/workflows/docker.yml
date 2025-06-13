@@ -49,8 +49,8 @@ jobs:
           type=semver,pattern={{major}}
           type=sha
 
-    - name: Determine version
-      id: version
+    - name: Get build info
+      id: build-info
       run: |
         if [[ "${{ github.ref_type }}" == "tag" ]]; then
           VERSION=${{ github.ref_name }}
@@ -60,6 +60,8 @@ jobs:
           VERSION="${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)"
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "git_commit=${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -72,6 +74,6 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
-          VERSION=${{ steps.version.outputs.version }}
-          GIT_COMMIT=${{ github.sha }}
-          BUILD_TIME=${{ github.run_started_at }}
+          VERSION=${{ steps.build-info.outputs.version }}
+          GIT_COMMIT=${{ steps.build-info.outputs.git_commit }}
+          BUILD_TIME=${{ steps.build-info.outputs.build_time }}
