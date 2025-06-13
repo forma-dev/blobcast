@@ -85,11 +85,13 @@ func PutFileData(
 	// Prepare chunks for submission
 	chunkResults := make([]chan SubmissionResult, len(chunks))
 	chunkHashes := make([][32]byte, len(chunks))
+	chunkKeys := make([]state.UploadRecordKey, len(chunks))
 
 	for i, chunk := range chunks {
 		chunkHashes[i] = crypto.HashBytes(chunk)
+		chunkKeys[i] = state.UploadRecordKey(crypto.HashBytes([]byte("chk:"), chunkHashes[i][:]))
 
-		chunkState, err := uploadState.GetUploadRecord(chunkHashes[i])
+		chunkState, err := uploadState.GetUploadRecord(chunkKeys[i])
 		if err != nil {
 			return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 		}
@@ -142,7 +144,7 @@ func PutFileData(
 			)
 
 			// save upload record
-			chunkState, err := uploadState.GetUploadRecord(state.UploadRecordKey(chunkHashes[i]))
+			chunkState, err := uploadState.GetUploadRecord(chunkKeys[i])
 			if err != nil {
 				return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 			}
@@ -160,7 +162,7 @@ func PutFileData(
 
 	// add chunks to file manifest
 	for i := range chunkHashes {
-		chunkState, err := uploadState.GetUploadRecord(chunkHashes[i])
+		chunkState, err := uploadState.GetUploadRecord(chunkKeys[i])
 		if err != nil {
 			return nil, fileHash, fmt.Errorf("error getting chunk state: %v", err)
 		}
@@ -187,6 +189,7 @@ func PutFileData(
 		"file_name", fileName,
 		"file_hash", hex.EncodeToString(fileHash[:]),
 		"blobcast_url", manifestIdentifier.URL(),
+		"celestia_height", manifestIdentifier.Height,
 	)
 
 	// save file state
