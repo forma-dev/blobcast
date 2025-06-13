@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/celestiaorg/celestia-node/api/rpc/client"
 	"github.com/celestiaorg/celestia-node/blob"
@@ -206,11 +207,14 @@ func (c *CelestiaDA) Cfg() DAConfig {
 }
 
 func (c *CelestiaDA) submitBlobs(ctx context.Context, dataBlobs []*blob.Blob) (uint64, error) {
+	submitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	var height uint64
 	options := state.NewTxConfig()
-	err := util.Retry(ctx, util.DefaultRetryConfig(), func() error {
+	err := util.Retry(submitCtx, util.DefaultRetryConfig(), func() error {
 		var opErr error
-		height, opErr = c.client.Blob.Submit(ctx, dataBlobs, options)
+		height, opErr = c.client.Blob.Submit(submitCtx, dataBlobs, options)
 		if opErr != nil {
 			slog.Error("Error submitting blob", "error", opErr)
 		}
