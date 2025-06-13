@@ -6,6 +6,10 @@ ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 
@@ -18,7 +22,12 @@ RUN go mod download
 COPY . .
 
 RUN export CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} && \
-  go build -ldflags="-w -s" -o build/blobcast .
+  go build \
+    -ldflags="-w -s \
+      -X github.com/forma-dev/blobcast/pkg/version.Version=${VERSION} \
+      -X github.com/forma-dev/blobcast/pkg/version.GitCommit=${GIT_COMMIT} \
+      -X github.com/forma-dev/blobcast/pkg/version.BuildTime=${BUILD_TIME}" \
+    -o build/blobcast .
 
 # Runtime stage
 FROM alpine:latest
