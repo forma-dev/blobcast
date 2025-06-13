@@ -19,6 +19,33 @@ func NewStorageServiceServer() *StorageServiceServer {
 	return &StorageServiceServer{}
 }
 
+func (s *StorageServiceServer) BatchGetFileManifest(
+	ctx context.Context,
+	req *pbStorageapisV1.BatchGetFileManifestRequest,
+) (*pbStorageapisV1.BatchGetFileManifestResponse, error) {
+	if len(req.Ids) > 1000 {
+		return nil, status.Errorf(codes.InvalidArgument, "batch size must be less than 1000")
+	}
+
+	manifests := make([]*pbStorageapisV1.FileManifest, 0)
+	for _, id := range req.Ids {
+		fileManifestId, err := types.BlobIdentifierFromString(id)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid manifest ID: %v", err)
+		}
+		fileManifest, err := node.GetFileManifest(ctx, fileManifestId)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "error getting file manifest: %v", err)
+		}
+		manifests = append(manifests, &pbStorageapisV1.FileManifest{
+			Id:       id,
+			Manifest: fileManifest,
+		})
+	}
+
+	return &pbStorageapisV1.BatchGetFileManifestResponse{Manifests: manifests}, nil
+}
+
 func (s *StorageServiceServer) GetDirectoryManifest(
 	ctx context.Context,
 	req *pbStorageapisV1.GetDirectoryManifestRequest,

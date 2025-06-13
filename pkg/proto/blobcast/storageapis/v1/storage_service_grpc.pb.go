@@ -24,6 +24,7 @@ const (
 	StorageService_GetDirectoryManifest_FullMethodName = "/blobcast.storageapis.v1.StorageService/GetDirectoryManifest"
 	StorageService_GetFileManifest_FullMethodName      = "/blobcast.storageapis.v1.StorageService/GetFileManifest"
 	StorageService_GetFileData_FullMethodName          = "/blobcast.storageapis.v1.StorageService/GetFileData"
+	StorageService_BatchGetFileManifest_FullMethodName = "/blobcast.storageapis.v1.StorageService/BatchGetFileManifest"
 )
 
 // StorageServiceClient is the client API for StorageService service.
@@ -35,6 +36,7 @@ type StorageServiceClient interface {
 	GetDirectoryManifest(ctx context.Context, in *GetDirectoryManifestRequest, opts ...grpc.CallOption) (*GetDirectoryManifestResponse, error)
 	GetFileManifest(ctx context.Context, in *GetFileManifestRequest, opts ...grpc.CallOption) (*GetFileManifestResponse, error)
 	GetFileData(ctx context.Context, in *GetFileDataRequest, opts ...grpc.CallOption) (*GetFileDataResponse, error)
+	BatchGetFileManifest(ctx context.Context, in *BatchGetFileManifestRequest, opts ...grpc.CallOption) (*BatchGetFileManifestResponse, error)
 }
 
 type storageServiceClient struct {
@@ -95,6 +97,16 @@ func (c *storageServiceClient) GetFileData(ctx context.Context, in *GetFileDataR
 	return out, nil
 }
 
+func (c *storageServiceClient) BatchGetFileManifest(ctx context.Context, in *BatchGetFileManifestRequest, opts ...grpc.CallOption) (*BatchGetFileManifestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetFileManifestResponse)
+	err := c.cc.Invoke(ctx, StorageService_BatchGetFileManifest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StorageServiceServer is the server API for StorageService service.
 // All implementations must embed UnimplementedStorageServiceServer
 // for forward compatibility.
@@ -104,6 +116,7 @@ type StorageServiceServer interface {
 	GetDirectoryManifest(context.Context, *GetDirectoryManifestRequest) (*GetDirectoryManifestResponse, error)
 	GetFileManifest(context.Context, *GetFileManifestRequest) (*GetFileManifestResponse, error)
 	GetFileData(context.Context, *GetFileDataRequest) (*GetFileDataResponse, error)
+	BatchGetFileManifest(context.Context, *BatchGetFileManifestRequest) (*BatchGetFileManifestResponse, error)
 	mustEmbedUnimplementedStorageServiceServer()
 }
 
@@ -128,6 +141,9 @@ func (UnimplementedStorageServiceServer) GetFileManifest(context.Context, *GetFi
 }
 func (UnimplementedStorageServiceServer) GetFileData(context.Context, *GetFileDataRequest) (*GetFileDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFileData not implemented")
+}
+func (UnimplementedStorageServiceServer) BatchGetFileManifest(context.Context, *BatchGetFileManifestRequest) (*BatchGetFileManifestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchGetFileManifest not implemented")
 }
 func (UnimplementedStorageServiceServer) mustEmbedUnimplementedStorageServiceServer() {}
 func (UnimplementedStorageServiceServer) testEmbeddedByValue()                        {}
@@ -240,6 +256,24 @@ func _StorageService_GetFileData_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StorageService_BatchGetFileManifest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetFileManifestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageServiceServer).BatchGetFileManifest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StorageService_BatchGetFileManifest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageServiceServer).BatchGetFileManifest(ctx, req.(*BatchGetFileManifestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StorageService_ServiceDesc is the grpc.ServiceDesc for StorageService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -266,6 +300,10 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFileData",
 			Handler:    _StorageService_GetFileData_Handler,
+		},
+		{
+			MethodName: "BatchGetFileManifest",
+			Handler:    _StorageService_BatchGetFileManifest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
