@@ -42,6 +42,8 @@ func runStart(command *cobra.Command, args []string) error {
 	}
 	defer conn.Close()
 
+	cmd.Banner()
+
 	storageClient := pbStorageapisV1.NewStorageServiceClient(conn)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +54,7 @@ func runStart(command *cobra.Command, args []string) error {
 	loggedHandler := middleware.LogRequestMiddleware(handler)
 
 	addr := flagAddr + ":" + flagPort
-	slog.Info("Blobcast explorer listening", "addr", addr)
+	slog.Info("Blobcast gateway listening", "addr", addr)
 	return http.ListenAndServe(addr, loggedHandler)
 }
 

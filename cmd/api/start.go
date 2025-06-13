@@ -36,6 +36,8 @@ func runStart(command *cobra.Command, args []string) error {
 	}
 	defer conn.Close()
 
+	cmd.Banner()
+
 	storageClient := pbStorageapisV1.NewStorageServiceClient(conn)
 	rollupClient := pbRollupapisV1.NewRollupServiceClient(conn)
 

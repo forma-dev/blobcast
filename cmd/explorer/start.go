@@ -35,6 +35,8 @@ func runStart(command *cobra.Command, args []string) error {
 	}
 	defer indexDB.Close()
 
+	cmd.Banner()
+
 	server := explorer.NewServer(indexDB, strings.TrimRight(flagGatewayUrl, "/"))
 
 	addr := flagAddr + ":" + flagPort

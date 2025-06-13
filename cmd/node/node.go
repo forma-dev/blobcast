@@ -42,6 +42,8 @@ func init() {
 }
 
 func initNode() error {
+	cmd.Banner()
+
 	slog.Info("Initializing with celestia network", "network", flagNetwork)
 	state.SetNetwork(flagNetwork)
 

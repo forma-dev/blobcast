@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/forma-dev/blobcast/pkg/version"
 	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
 
@@ -32,6 +33,8 @@ Celestia blocks to provide content-addressable file storage with cryptographic i
 func init() {
 	RootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Enable verbose output")
 	RootCmd.PersistentFlags().BoolVar(&flagPprof, "pprof", false, "Enable pprof")
+
+	RootCmd.Version = version.Get().String()
 
 	cobra.OnInitialize(initLogging)
 	cobra.OnInitialize(initPprof)
@@ -67,4 +70,24 @@ func GetEnvWithDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func Banner() {
+	info := version.Get()
+
+	banner := `
+ ____  __     __  ____   ___   __   ____  ____
+(  _ \(  )   /  \(  _ \ / __) / _\ / ___)(_  _)
+ ) _ (/ (_/\(  O )) _ (( (__ /    \\___ \  )(
+(____/\____/ \__/(____/ \___)\_/\_/(____/ (__)
+`
+	fmt.Println(banner)
+
+	fmt.Printf("     Version: %s\n", info.Version)
+	fmt.Printf("  Git Commit: %s\n", info.GitCommit)
+	fmt.Printf("  Build Time: %s\n", info.BuildTime)
+	fmt.Printf("  Go Version: %s\n", info.GoVersion)
+	fmt.Printf("    Platform: %s\n", info.Platform)
+	fmt.Println()
+	fmt.Println("================================================")
 }

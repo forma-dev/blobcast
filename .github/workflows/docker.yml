@@ -49,6 +49,18 @@ jobs:
           type=semver,pattern={{major}}
           type=sha
 
+    - name: Determine version
+      id: version
+      run: |
+        if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          VERSION=${{ github.ref_name }}
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          VERSION="pr-${{ github.event.number }}-$(echo ${{ github.sha }} | cut -c1-7)"
+        else
+          VERSION="${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -59,3 +71,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          VERSION=${{ steps.version.outputs.version }}
+          GIT_COMMIT=${{ github.sha }}
+          BUILD_TIME=${{ github.run_started_at }}

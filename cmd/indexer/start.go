@@ -55,6 +55,8 @@ func runStart(command *cobra.Command, args []string) error {
 		return fmt.Errorf("error creating indexer service: %v", err)
 	}
 
+	cmd.Banner()
+
 	slog.Info("Starting blobcast indexer",
 		"node_grpc", flagNodeGRPC,
 		"sync_interval", syncInterval,
