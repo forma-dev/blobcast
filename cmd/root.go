@@ -3,14 +3,18 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
+
+	_ "net/http/pprof"
 )
 
 var (
 	flagVerbose bool
+	flagPprof   bool
 )
 
 var RootCmd = &cobra.Command{
@@ -26,8 +30,11 @@ Celestia blocks to provide content-addressable file storage with cryptographic i
 }
 
 func init() {
-	cobra.OnInitialize(initLogging)
 	RootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "Enable verbose output")
+	RootCmd.PersistentFlags().BoolVar(&flagPprof, "pprof", false, "Enable pprof")
+
+	cobra.OnInitialize(initLogging)
+	cobra.OnInitialize(initPprof)
 }
 
 func initLogging() {
@@ -38,6 +45,14 @@ func initLogging() {
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 		Level: logLevel,
 	})))
+}
+
+func initPprof() {
+	if flagPprof {
+		go func() {
+			http.ListenAndServe("localhost:6060", nil)
+		}()
+	}
 }
 
 func Execute() {
