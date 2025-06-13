@@ -67,7 +67,7 @@ func NewSubmitter(da celestia.BlobStore) *Submitter {
 }
 
 func (s *Submitter) Submit(payload []byte) chan SubmissionResult {
-	result := make(chan SubmissionResult)
+	result := make(chan SubmissionResult, 1)
 	item := SubmissionItem{
 		Payload: payload,
 		Result:  result,
@@ -77,13 +77,14 @@ func (s *Submitter) Submit(payload []byte) chan SubmissionResult {
 	case s.queue <- item:
 	case <-s.ctx.Done():
 		result <- SubmissionResult{Error: fmt.Errorf("context cancelled")}
+		close(result)
 	}
 
 	return result
 }
 
 func (s *Submitter) SubmitWithPriority(payload []byte) chan SubmissionResult {
-	result := make(chan SubmissionResult)
+	result := make(chan SubmissionResult, 1)
 	item := SubmissionItem{
 		Payload: payload,
 		Result:  result,
@@ -93,6 +94,7 @@ func (s *Submitter) SubmitWithPriority(payload []byte) chan SubmissionResult {
 	case s.priorityQueue <- item:
 	case <-s.ctx.Done():
 		result <- SubmissionResult{Error: fmt.Errorf("context cancelled")}
+		close(result)
 	}
 
 	return result
@@ -179,9 +181,12 @@ func (s *Submitter) submitBatch(batch []SubmissionItem) {
 		slog.Error("error submitting batch to celestia", "batch_size", len(batch), "error", err)
 		for _, item := range batch {
 			item.Result <- SubmissionResult{Error: err}
+			close(item.Result)
 		}
 		return
 	}
+
+	slog.Info("sucessfully submitted batch to celestia", "batch_size", len(batch), "total_bytes", totalSize)
 
 	for i, item := range batch {
 		item.Result <- SubmissionResult{
@@ -190,5 +195,6 @@ func (s *Submitter) submitBatch(batch []SubmissionItem) {
 				Commitment: crypto.Hash(commitments[i]),
 			},
 		}
+		close(item.Result)
 	}
 }
