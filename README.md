@@ -35,7 +35,7 @@ Blobcast is a minimal based rollup for publishing and retrieving files on top of
 
 ## Prerequisites
 
-* A running [Celestia node](https://docs.celestia.org/nodes/light-node) (light node is sufficient)
+* A running [Celestia light node](https://docs.celestia.org/how-to-guides/light-node)
 
 ---
 
