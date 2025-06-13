@@ -16,14 +16,35 @@ var staticFS embed.FS
 var homeTemplate *template.Template
 var directoryTemplate *template.Template
 
+// Template function map
+var funcMap = template.FuncMap{
+	"add": func(a, b int) int {
+		return a + b
+	},
+	"sub": func(a, b int) int {
+		return a - b
+	},
+	"mul": func(a, b int) int {
+		return a * b
+	},
+	"div": func(a, b int) int {
+		if b != 0 {
+			return a / b
+		}
+		return 0
+	},
+}
+
 func init() {
 	var err error
-	homeTemplate, err = template.New("home").ParseFS(templateFS, "templates/base.html", "templates/home.html")
+	homeTemplate, err = template.New("home").Funcs(funcMap).ParseFS(templateFS, "templates/base.html", "templates/home.html")
 	if err != nil {
 		panic("Failed to parse home templates: " + err.Error())
 	}
 
-	directoryTemplate, err = template.New("directory").ParseFS(templateFS, "templates/base.html", "templates/directory.html")
+	directoryTemplate, err = template.New("directory").
+		Funcs(funcMap).
+		ParseFS(templateFS, "templates/base.html", "templates/directory.html", "templates/pagination.html")
 	if err != nil {
 		panic("Failed to parse directory templates: " + err.Error())
 	}
@@ -31,6 +52,16 @@ func init() {
 
 type BaseTemplateData struct {
 	Title string
+}
+
+type Pagination struct {
+	BaseURL     string
+	CurrentPage int
+	TotalPages  int
+	HasPrev     bool
+	HasNext     bool
+	PrevPage    int
+	NextPage    int
 }
 
 type HomeTemplateData struct {
@@ -46,6 +77,8 @@ type DirectoryTemplateData struct {
 	Directories []DirectoryItem
 	Files       []FileItem
 	HasParent   bool
+	TotalFiles  int
+	Pagination  *Pagination
 }
 
 type DirectoryItem struct {
@@ -56,7 +89,6 @@ type DirectoryItem struct {
 type FileItem struct {
 	Name         string
 	Path         string
-	Icon         string
 	Size         string
 	MimeType     string
 	ManifestID   string
@@ -86,7 +118,7 @@ func ServeStatic(w http.ResponseWriter, r *http.Request) {
 func RenderHome(w http.ResponseWriter) error {
 	data := HomeTemplateData{
 		BaseTemplateData: BaseTemplateData{
-			Title: "Blobcast Explorer",
+			Title: "Blobcast Gateway",
 		},
 	}
 	return homeTemplate.ExecuteTemplate(w, "home.html", data)

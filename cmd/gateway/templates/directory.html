@@ -19,7 +19,7 @@
                 {{if eq (len .Directories) 1}}{{len .Directories}} Directory{{else}}{{len .Directories}} Directories{{end}}
             </div>
             <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
-                {{len .Files}} Files
+                {{.TotalFiles}} Files
             </div>
         </div>
     </div>
@@ -62,7 +62,7 @@
     {{- if .Files -}}
     <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
         <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-            <h4 class="text-lg font-semibold text-gray-900">Files ({{len .Files}})</h4>
+            <h4 class="text-lg font-semibold text-gray-900">Files {{if .Pagination}}({{add (mul (sub .Pagination.CurrentPage 1) 100) 1}} - {{add (mul (sub .Pagination.CurrentPage 1) 100) (len .Files)}} of {{.TotalFiles}}){{else}}({{len .Files}}){{end}}</h4>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -174,5 +174,9 @@
         </div>
     </div>
     {{- end -}}
+
+    {{if and .Pagination (gt .Pagination.TotalPages 1)}}
+    {{template "pagination" .Pagination}}
+    {{end}}
 </div>
 {{- end -}}

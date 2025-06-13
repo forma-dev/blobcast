@@ -17,6 +17,7 @@ import (
 	"github.com/forma-dev/blobcast/pkg/util"
 	"github.com/spf13/cobra"
 
+	pbStorageV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storage/v1"
 	pbStorageapisV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/storageapis/v1"
 )
 
@@ -55,8 +56,6 @@ func runStart(command *cobra.Command, args []string) error {
 	return http.ListenAndServe(addr, loggedHandler)
 }
 
-// directoryHandler resolves the manifest, fetches the directory manifest
-// from Celestia and renders a minimal HTML view.
 func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbStorageapisV1.StorageServiceClient) {
 	// Handle static files
 	if strings.HasPrefix(r.URL.Path, "/static/") {
@@ -145,25 +144,11 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 		displayID = manifestID[:10] + "..." + manifestID[len(manifestID)-10:]
 	}
 
-	// Build template data
-	data := DirectoryTemplateData{
-		BaseTemplateData: BaseTemplateData{
-			Title: "Blobcast - " + manifestID,
-		},
-		ManifestID:  manifestID,
-		DisplayID:   displayID,
-		SubPath:     subPath,
-		HasParent:   subPath != "",
-		Directories: make([]DirectoryItem, 0),
-		Files:       make([]FileItem, 0),
-	}
-
-	// Calculate parent path if we have a subPath
-	if subPath != "" {
-		if idx := strings.LastIndex(subPath, "/"); idx >= 0 {
-			data.ParentPath = subPath[:idx]
-		} else {
-			data.ParentPath = ""
+	// Parse pagination parameters
+	page := 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			page = parsed
 		}
 	}
 
@@ -181,7 +166,106 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 	sort.Strings(dirs)
 	sort.Strings(files)
 
-	// Build directories data
+	// Calculate pagination for files (100 files per page)
+	filesPerPage := 100
+	totalFiles := len(files)
+	totalPages := (totalFiles + filesPerPage - 1) / filesPerPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	// Ensure page is within bounds
+	if page > totalPages {
+		page = totalPages
+	}
+
+	// Calculate file slice boundaries
+	startIndex := (page - 1) * filesPerPage
+	endIndex := min(startIndex+filesPerPage, totalFiles)
+
+	// Slice files for current page
+	var pagedFiles []string
+	if startIndex < totalFiles {
+		pagedFiles = files[startIndex:endIndex]
+	}
+
+	// batch get file manifests only for current page
+	fileManifestIds := make([]string, 0, len(pagedFiles))
+	filePathToManifestId := make(map[string]string)
+	for _, name := range pagedFiles {
+		filePath := name
+		if subPath != "" {
+			filePath = subPath + "/" + name
+		}
+
+		// Find the matching file in dirManifest.Files for this paged file
+		for _, f := range dirManifest.Files {
+			if f.RelativePath == filePath || (subPath == "" && f.RelativePath == name) {
+				manifestId := types.BlobIdentifierFromProto(f.Id).ID()
+				fileManifestIds = append(fileManifestIds, manifestId)
+				filePathToManifestId[filePath] = manifestId
+				break
+			}
+		}
+	}
+
+	var fileManifests map[string]*pbStorageV1.FileManifest
+	if len(fileManifestIds) > 0 {
+		fileManifestsResp, err := storageClient.BatchGetFileManifest(context.Background(), &pbStorageapisV1.BatchGetFileManifestRequest{
+			Ids: fileManifestIds,
+		})
+		if err == nil {
+			fileManifests = make(map[string]*pbStorageV1.FileManifest)
+			for _, f := range fileManifestsResp.Manifests {
+				fileManifests[f.Id] = f.Manifest
+			}
+		}
+	}
+
+	// Build template data
+	data := DirectoryTemplateData{
+		BaseTemplateData: BaseTemplateData{
+			Title: "Blobcast - " + manifestID,
+		},
+		ManifestID:  manifestID,
+		DisplayID:   displayID,
+		SubPath:     subPath,
+		HasParent:   subPath != "",
+		Directories: make([]DirectoryItem, 0),
+		Files:       make([]FileItem, 0),
+		TotalFiles:  totalFiles,
+	}
+
+	// Calculate parent path if we have a subPath
+	if subPath != "" {
+		if idx := strings.LastIndex(subPath, "/"); idx >= 0 {
+			data.ParentPath = subPath[:idx]
+		} else {
+			data.ParentPath = ""
+		}
+	}
+
+	// Create pagination data
+	var pagination *Pagination
+	if totalPages > 1 {
+		baseURL := "/" + manifestID
+		if subPath != "" {
+			baseURL += "/" + subPath
+		}
+
+		pagination = &Pagination{
+			BaseURL:     baseURL,
+			CurrentPage: page,
+			TotalPages:  totalPages,
+			HasPrev:     page > 1,
+			HasNext:     page < totalPages,
+			PrevPage:    page - 1,
+			NextPage:    page + 1,
+		}
+	}
+	data.Pagination = pagination
+
+	// Copy directory and file data to template
 	for _, name := range dirs {
 		path := name
 		if subPath != "" {
@@ -193,50 +277,38 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, storageClient pbSt
 		})
 	}
 
-	// Build files data
-	for _, name := range files {
+	// Build files data for current page
+	for _, name := range pagedFiles {
 		filePath := name
 		if subPath != "" {
 			filePath = subPath + "/" + name
 		}
 
-		// Find the file in the directory manifest to get its file manifest
+		manifestId := filePathToManifestId[filePath]
+		if manifestId == "" {
+			continue
+		}
+
 		var fileSize string
 		var mimeType string
-		var fileManifestIdentifier *types.BlobIdentifier
 
-		for _, f := range dirManifest.Files {
-			if f.RelativePath == filePath || (subPath == "" && f.RelativePath == name) {
-				fileManifestIdentifier = &types.BlobIdentifier{
-					Height:     f.Id.Height,
-					Commitment: crypto.Hash(f.Id.Commitment),
-				}
-
-				fileManifestResponse, err := storageClient.GetFileManifest(context.Background(), &pbStorageapisV1.GetFileManifestRequest{
-					Id: fileManifestIdentifier.ID(),
-				})
-				if err == nil {
-					fileSize = formatFileSize(fileManifestResponse.Manifest.FileSize)
-					mimeType = fileManifestResponse.Manifest.MimeType
-					if mimeType == "" {
-						mimeType = "application/octet-stream"
-					}
-				}
-				break
+		fileManifest := fileManifests[manifestId]
+		if fileManifest != nil {
+			fileSize = formatFileSize(fileManifest.FileSize)
+			mimeType = fileManifest.MimeType
+			if mimeType == "" {
+				mimeType = "application/octet-stream"
 			}
 		}
 
-		if fileManifestIdentifier != nil {
-			data.Files = append(data.Files, FileItem{
-				Name:         name,
-				Path:         filePath,
-				Icon:         getFileIcon(name),
-				Size:         fileSize,
-				MimeType:     mimeType,
-				ManifestID:   fileManifestIdentifier.ID(),
-				ManifestLink: fileManifestIdentifier.ID()[:10] + "..." + fileManifestIdentifier.ID()[len(fileManifestIdentifier.ID())-10:],
-			})
-		}
+		data.Files = append(data.Files, FileItem{
+			Name:         name,
+			Path:         filePath,
+			Size:         fileSize,
+			MimeType:     mimeType,
+			ManifestID:   manifestId,
+			ManifestLink: manifestId[:10] + "..." + manifestId[len(manifestId)-10:],
+		})
 	}
 
 	// Render template instead of manual HTML generation
@@ -365,35 +437,6 @@ func isMediaContentType(contentType string) bool {
 	return prefix == "image" || prefix == "video" || prefix == "audio" ||
 		contentType == "text/plain" || contentType == "text/html" ||
 		contentType == "application/pdf"
-}
-
-// Get a more specific icon based on the file extension
-func getFileIcon(fileName string) string {
-	ext := strings.ToLower(filepath.Ext(fileName))
-	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp":
-		return "🖼️"
-	case ".mp4", ".webm", ".mov", ".avi", ".mkv":
-		return "🎬"
-	case ".mp3", ".wav", ".ogg", ".flac":
-		return "🎵"
-	case ".pdf":
-		return "📑"
-	case ".doc", ".docx", ".txt", ".md":
-		return "📝"
-	case ".xls", ".xlsx", ".csv":
-		return "📊"
-	case ".zip", ".tar", ".gz", ".rar":
-		return "🗜️"
-	case ".html", ".htm":
-		return "🌐"
-	case ".js", ".py", ".go", ".java", ".c", ".cpp", ".ts", ".rs", ".sol":
-		return "📜"
-	case ".json", ".yaml", ".yml", ".toml", ".xml":
-		return "🗃️"
-	default:
-		return "📄"
-	}
 }
 
 // formatFileSize formats a file size in bytes to a human-readable string
