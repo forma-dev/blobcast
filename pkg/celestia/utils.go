@@ -3,7 +3,7 @@ package celestia
 import (
 	"encoding/hex"
 
-	"github.com/celestiaorg/go-square/v2/share"
+	"github.com/celestiaorg/go-square/v3/share"
 )
 
 // Convert hex namespace ID to blob namespace
