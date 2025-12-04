@@ -163,7 +163,7 @@ func (s *ChainState) GetBlockByHash(hash HashKey) (*types.Block, error) {
 	}
 	defer closer.Close()
 
-	height := util.Uint64FromBytes(heightBytes)
+	height := util.Uint64FromBytesKey(heightBytes)
 	return s.GetBlock(height)
 }
 

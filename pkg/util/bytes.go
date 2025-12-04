@@ -17,6 +17,12 @@ func BytesFromUint64(v uint64) []byte {
 	return b
 }
 
+func BytesFromUint64Key(v uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, v)
+	return b
+}
+
 func BytesFromTime(t time.Time) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(t.Unix()))

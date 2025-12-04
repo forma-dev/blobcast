@@ -28,7 +28,7 @@ func prefixKey(key []byte, prefix []byte) []byte {
 }
 
 func prefixHeightKey(height uint64, prefix []byte) []byte {
-	return prefixKey(util.BytesFromUint64(height), prefix)
+	return prefixKey(util.BytesFromUint64Key(height), prefix)
 }
 
 func SetNetwork(network string) {

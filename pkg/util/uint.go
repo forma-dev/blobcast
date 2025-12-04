@@ -9,3 +9,7 @@ func Uint32FromBytes(b []byte) uint32 {
 func Uint64FromBytes(b []byte) uint64 {
 	return binary.LittleEndian.Uint64(b)
 }
+
+func Uint64FromBytesKey(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
+}

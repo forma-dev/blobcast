@@ -67,7 +67,7 @@ func (tx *ChainStateTransaction) PutBlock(height uint64, block *types.Block) err
 
 	hash := block.Hash()
 	hashKey := prefixKey(hash.Bytes(), tx.state.blockHashPrefix)
-	return tx.batch.Set(hashKey, util.BytesFromUint64(height), nil)
+	return tx.batch.Set(hashKey, util.BytesFromUint64Key(height), nil)
 }
 
 func (tx *ChainStateTransaction) PutChunk(key HashKey, value []byte, hash crypto.Hash) error {
