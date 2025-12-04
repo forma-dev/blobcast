@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/forma-dev/blobcast/cmd"
 	"github.com/forma-dev/blobcast/pkg/indexer"
@@ -27,18 +26,11 @@ func init() {
 	startCmd.Flags().StringVar(&flagNodeGRPC, "node-grpc",
 		cmd.GetEnvWithDefault("BLOBCAST_NODE_GRPC", "127.0.0.1:50051"),
 		"gRPC address for a blobcast full node")
-	startCmd.Flags().StringVar(&flagSyncInterval, "sync-interval", "5s",
-		"How often to check for new blocks")
 	startCmd.Flags().Uint64Var(&flagStartHeight, "start-height", 0,
 		"Block height to start indexing from (0 = from beginning)")
 }
 
 func runStart(command *cobra.Command, args []string) error {
-	syncInterval, err := time.ParseDuration(flagSyncInterval)
-	if err != nil {
-		return fmt.Errorf("invalid sync interval: %v", err)
-	}
-
 	conn, err := util.NewGRPCClient(flagNodeGRPC)
 	if err != nil {
 		return fmt.Errorf("error creating gRPC client: %v", err)
@@ -59,8 +51,7 @@ func runStart(command *cobra.Command, args []string) error {
 
 	slog.Info("Starting blobcast indexer",
 		"node_grpc", flagNodeGRPC,
-		"sync_interval", syncInterval,
 		"start_height", flagStartHeight)
 
-	return indexerService.Start(ctx, syncInterval)
+	return indexerService.Start(ctx)
 }

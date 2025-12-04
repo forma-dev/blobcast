@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package blobcast.rollupapis.v1;
+
+option go_package = "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1";
+
+message SubscribeToHeadersRequest {
+  // Optional start height to begin streaming from
+  // If not set or 0, will only stream new headers as they are finalized
+  // If set, will first stream historical headers from this height, then continue with new headers
+  uint64 start_height = 1;
+}

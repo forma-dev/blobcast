@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RollupService_GetBlockByHeight_FullMethodName = "/blobcast.rollupapis.v1.RollupService/GetBlockByHeight"
-	RollupService_GetBlockByHash_FullMethodName   = "/blobcast.rollupapis.v1.RollupService/GetBlockByHash"
-	RollupService_GetLatestBlock_FullMethodName   = "/blobcast.rollupapis.v1.RollupService/GetLatestBlock"
-	RollupService_GetChainInfo_FullMethodName     = "/blobcast.rollupapis.v1.RollupService/GetChainInfo"
+	RollupService_GetBlockByHeight_FullMethodName   = "/blobcast.rollupapis.v1.RollupService/GetBlockByHeight"
+	RollupService_GetBlockByHash_FullMethodName     = "/blobcast.rollupapis.v1.RollupService/GetBlockByHash"
+	RollupService_GetLatestBlock_FullMethodName     = "/blobcast.rollupapis.v1.RollupService/GetLatestBlock"
+	RollupService_GetChainInfo_FullMethodName       = "/blobcast.rollupapis.v1.RollupService/GetChainInfo"
+	RollupService_SubscribeToHeaders_FullMethodName = "/blobcast.rollupapis.v1.RollupService/SubscribeToHeaders"
 )
 
 // RollupServiceClient is the client API for RollupService service.
@@ -33,6 +34,8 @@ type RollupServiceClient interface {
 	GetBlockByHash(ctx context.Context, in *GetBlockByHashRequest, opts ...grpc.CallOption) (*GetBlockByHashResponse, error)
 	GetLatestBlock(ctx context.Context, in *GetLatestBlockRequest, opts ...grpc.CallOption) (*GetLatestBlockResponse, error)
 	GetChainInfo(ctx context.Context, in *GetChainInfoRequest, opts ...grpc.CallOption) (*GetChainInfoResponse, error)
+	// Server-side streaming RPC for subscribing to new block headers
+	SubscribeToHeaders(ctx context.Context, in *SubscribeToHeadersRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeToHeadersResponse], error)
 }
 
 type rollupServiceClient struct {
@@ -83,6 +86,25 @@ func (c *rollupServiceClient) GetChainInfo(ctx context.Context, in *GetChainInfo
 	return out, nil
 }
 
+func (c *rollupServiceClient) SubscribeToHeaders(ctx context.Context, in *SubscribeToHeadersRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeToHeadersResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &RollupService_ServiceDesc.Streams[0], RollupService_SubscribeToHeaders_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeToHeadersRequest, SubscribeToHeadersResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type RollupService_SubscribeToHeadersClient = grpc.ServerStreamingClient[SubscribeToHeadersResponse]
+
 // RollupServiceServer is the server API for RollupService service.
 // All implementations must embed UnimplementedRollupServiceServer
 // for forward compatibility.
@@ -91,6 +113,8 @@ type RollupServiceServer interface {
 	GetBlockByHash(context.Context, *GetBlockByHashRequest) (*GetBlockByHashResponse, error)
 	GetLatestBlock(context.Context, *GetLatestBlockRequest) (*GetLatestBlockResponse, error)
 	GetChainInfo(context.Context, *GetChainInfoRequest) (*GetChainInfoResponse, error)
+	// Server-side streaming RPC for subscribing to new block headers
+	SubscribeToHeaders(*SubscribeToHeadersRequest, grpc.ServerStreamingServer[SubscribeToHeadersResponse]) error
 	mustEmbedUnimplementedRollupServiceServer()
 }
 
@@ -112,6 +136,9 @@ func (UnimplementedRollupServiceServer) GetLatestBlock(context.Context, *GetLate
 }
 func (UnimplementedRollupServiceServer) GetChainInfo(context.Context, *GetChainInfoRequest) (*GetChainInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChainInfo not implemented")
+}
+func (UnimplementedRollupServiceServer) SubscribeToHeaders(*SubscribeToHeadersRequest, grpc.ServerStreamingServer[SubscribeToHeadersResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeToHeaders not implemented")
 }
 func (UnimplementedRollupServiceServer) mustEmbedUnimplementedRollupServiceServer() {}
 func (UnimplementedRollupServiceServer) testEmbeddedByValue()                       {}
@@ -206,6 +233,17 @@ func _RollupService_GetChainInfo_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RollupService_SubscribeToHeaders_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeToHeadersRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RollupServiceServer).SubscribeToHeaders(m, &grpc.GenericServerStream[SubscribeToHeadersRequest, SubscribeToHeadersResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type RollupService_SubscribeToHeadersServer = grpc.ServerStreamingServer[SubscribeToHeadersResponse]
+
 // RollupService_ServiceDesc is the grpc.ServiceDesc for RollupService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -230,6 +268,12 @@ var RollupService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RollupService_GetChainInfo_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeToHeaders",
+			Handler:       _RollupService_SubscribeToHeaders_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "blobcast/rollupapis/v1/rollup_service.proto",
 }

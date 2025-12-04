@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/celestiaorg/celestia-node/blob"
 	"github.com/forma-dev/blobcast/pkg/celestia"
@@ -12,6 +14,7 @@ import (
 	"github.com/forma-dev/blobcast/pkg/crypto/merkle"
 	"github.com/forma-dev/blobcast/pkg/state"
 	"github.com/forma-dev/blobcast/pkg/types"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 
 	pbRollupV1 "github.com/forma-dev/blobcast/pkg/proto/blobcast/rollup/v1"
@@ -22,6 +25,10 @@ type BlobcastChain struct {
 	chainID    string
 	celestiaDA celestia.BlobStore
 	chainState *state.ChainState
+
+	// Block header subscription support
+	subscribersMutex sync.RWMutex
+	subscribers      map[uuid.UUID]chan *types.BlockHeader
 }
 
 func NewBlobcastChain(ctx context.Context, celestiaDA celestia.BlobStore) (*BlobcastChain, error) {
@@ -36,9 +43,10 @@ func NewBlobcastChain(ctx context.Context, celestiaDA celestia.BlobStore) (*Blob
 	}
 
 	return &BlobcastChain{
-		chainID:    chainID,
-		celestiaDA: celestiaDA,
-		chainState: chainState,
+		chainID:     chainID,
+		celestiaDA:  celestiaDA,
+		chainState:  chainState,
+		subscribers: make(map[uuid.UUID]chan *types.BlockHeader),
 	}, nil
 }
 
@@ -141,6 +149,9 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 			return fmt.Errorf("error committing transaction: %v", err)
 		}
 
+		// Publish the finalized block header to subscribers
+		bc.publishNewHeader(block.Header)
+
 		prevBlock = block
 		nextHeight++
 	}
@@ -194,6 +205,9 @@ func (bc *BlobcastChain) SyncChain(ctx context.Context) (err error) {
 				if err := tx.Commit(); err != nil {
 					return fmt.Errorf("error committing transaction: %v", err)
 				}
+
+				// Publish the finalized block header to subscribers
+				bc.publishNewHeader(block.Header)
 
 				prevBlock = block
 				nextHeight++
@@ -556,4 +570,92 @@ func (bc *BlobcastChain) SyncDirectoryManifest(
 	}
 
 	return true, tx.PutDirectoryManifest(manifestId, directoryManifest)
+}
+
+// SubscribeToNewHeaders creates a new subscription for receiving block headers
+// Returns a Subscription with a UUID and channel that will receive block headers as they are finalized
+func (bc *BlobcastChain) SubscribeToNewHeaders() *Subscription {
+	bc.subscribersMutex.Lock()
+	defer bc.subscribersMutex.Unlock()
+
+	// Generate a UUID for this subscription
+	id := uuid.New()
+
+	// Buffer size of 100 to prevent slow consumers from blocking block production
+	ch := make(chan *types.BlockHeader, 100)
+	bc.subscribers[id] = ch
+
+	return &Subscription{
+		ID: id,
+		Ch: ch,
+	}
+}
+
+// Unsubscribe removes a subscription - O(1) operation
+func (bc *BlobcastChain) Unsubscribe(sub *Subscription) {
+	if sub == nil {
+		return
+	}
+
+	bc.subscribersMutex.Lock()
+	defer bc.subscribersMutex.Unlock()
+
+	if ch, exists := bc.subscribers[sub.ID]; exists {
+		close(ch)
+		delete(bc.subscribers, sub.ID)
+	}
+}
+
+// publishNewHeader notifies all subscribers about a newly finalized block header
+// This should be called after a block is successfully committed
+func (bc *BlobcastChain) publishNewHeader(header *types.BlockHeader) {
+	bc.subscribersMutex.RLock()
+
+	// Make a snapshot of subscribers with their channels to avoid holding lock during sends
+	snapshot := make(map[uuid.UUID]chan *types.BlockHeader, len(bc.subscribers))
+	for id, ch := range bc.subscribers {
+		snapshot[id] = ch
+	}
+	bc.subscribersMutex.RUnlock()
+
+	// Track slow subscribers to disconnect them
+	var slowSubscribers []uuid.UUID
+
+	for id, ch := range snapshot {
+		// Use a timeout-based send to prevent blocking while ensuring delivery
+		// If a subscriber can't consume within 5 seconds, it's too slow and will be disconnected
+		// Use recover to handle the case where channel is closed by Unsubscribe during send
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// Channel was closed by Unsubscribe - this is fine, subscriber is gone
+					slog.Debug("Attempted to send on closed channel", "subscription_id", id)
+				}
+			}()
+
+			select {
+			case ch <- header:
+				// Successfully sent
+			case <-time.After(5 * time.Second):
+				// Subscriber is too slow - mark for disconnection
+				slog.Warn("Subscriber too slow, will be disconnected",
+					"subscription_id", id,
+					"block_height", header.Height)
+				slowSubscribers = append(slowSubscribers, id)
+			}
+		}()
+	}
+
+	// Disconnect slow subscribers to trigger their reconnection logic
+	if len(slowSubscribers) > 0 {
+		bc.subscribersMutex.Lock()
+		for _, id := range slowSubscribers {
+			if ch, exists := bc.subscribers[id]; exists {
+				close(ch)
+				delete(bc.subscribers, id)
+				slog.Info("Disconnected slow subscriber", "subscription_id", id)
+			}
+		}
+		bc.subscribersMutex.Unlock()
+	}
 }

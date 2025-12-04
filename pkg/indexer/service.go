@@ -51,69 +51,92 @@ func NewIndexerService(
 	}, nil
 }
 
-func (is *IndexerService) Start(ctx context.Context, syncInterval time.Duration) error {
-	ticker := time.NewTicker(syncInterval)
-	defer ticker.Stop()
-
-	if err := is.catchUp(ctx); err != nil {
-		slog.Error("Error during initial catchup", "error", err)
-	}
-
+func (is *IndexerService) Start(ctx context.Context) error {
+	// Use a labeled loop to restart subscription without recursion
+subscriptionLoop:
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			if err := is.syncNewBlocks(ctx); err != nil {
-				slog.Error("Error syncing new blocks", "error", err)
+		// Subscribe to block headers starting from the next block we need to index
+		stream, err := is.rollupClient.SubscribeToHeaders(ctx, &pbRollupapisV1.SubscribeToHeadersRequest{
+			StartHeight: is.lastIndexed + 1,
+		})
+		if err != nil {
+			slog.Error("Error subscribing to headers", "error", err)
+			// Reconnect with exponential backoff
+			if reconnectErr := is.reconnectWithBackoff(ctx); reconnectErr != nil {
+				return reconnectErr
+			}
+			// Retry subscription from the top of the loop
+			continue subscriptionLoop
+		}
+
+		slog.Info("Subscribed to block headers", "start_height", is.lastIndexed+1)
+
+		// Receive and process headers as they arrive
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				// Receive next header from stream
+				headerResp, err := stream.Recv()
+				if err != nil {
+					slog.Error("Error receiving header from stream", "error", err)
+					// Reconnect with exponential backoff
+					if reconnectErr := is.reconnectWithBackoff(ctx); reconnectErr != nil {
+						return reconnectErr
+					}
+					// Restart the subscription from the outer loop
+					continue subscriptionLoop
+				}
+
+				// Fetch and index the full block
+				height := headerResp.Header.Height
+				slog.Debug("Received header notification", "height", height)
+
+				if err := is.indexBlock(ctx, height); err != nil {
+					slog.Error("Error indexing block, reconnecting to retry", "height", height, "error", err)
+					// Reconnect with exponential backoff
+					if reconnectErr := is.reconnectWithBackoff(ctx); reconnectErr != nil {
+						return reconnectErr
+					}
+					// Restart subscription from lastIndexed + 1 to retry the failed block
+					continue subscriptionLoop
+				}
+
+				is.lastIndexed = height
+				slog.Info("Indexed new block", "height", height)
 			}
 		}
 	}
 }
 
-func (is *IndexerService) catchUp(ctx context.Context) error {
-	chainInfo, err := is.rollupClient.GetChainInfo(ctx, &pbRollupapisV1.GetChainInfoRequest{})
-	if err != nil {
-		return fmt.Errorf("error getting chain info: %v", err)
-	}
+func (is *IndexerService) reconnectWithBackoff(ctx context.Context) error {
+	backoff := time.Second
+	maxBackoff := 30 * time.Second
 
-	if is.lastIndexed >= chainInfo.FinalizedHeight {
-		slog.Info("Indexer is up to date", "height", is.lastIndexed)
-		return nil
-	}
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+			slog.Info("Attempting to reconnect to header stream", "backoff", backoff)
 
-	slog.Info("Catching up indexer", "from_height", is.lastIndexed, "to_height", chainInfo.FinalizedHeight)
+			// Try to get chain info to test connection
+			_, err := is.rollupClient.GetChainInfo(ctx, &pbRollupapisV1.GetChainInfoRequest{})
+			if err == nil {
+				slog.Info("Reconnection successful")
+				return nil
+			}
 
-	for height := is.lastIndexed + 1; height <= chainInfo.FinalizedHeight; height++ {
-		if err := is.indexBlock(ctx, height); err != nil {
-			return fmt.Errorf("error indexing block %d: %v", height, err)
+			slog.Warn("Reconnection failed, retrying", "error", err, "next_backoff", backoff*2)
+
+			// Exponential backoff
+			backoff *= 2
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
 		}
-		is.lastIndexed = height
-
-		if height%100 == 0 {
-			slog.Info("Indexing progress", "height", height, "target", chainInfo.FinalizedHeight)
-		}
 	}
-
-	slog.Info("Indexer catch-up complete", "height", is.lastIndexed)
-	return nil
-}
-
-func (is *IndexerService) syncNewBlocks(ctx context.Context) error {
-	chainInfo, err := is.rollupClient.GetChainInfo(ctx, &pbRollupapisV1.GetChainInfoRequest{})
-	if err != nil {
-		return err
-	}
-
-	for height := is.lastIndexed + 1; height <= chainInfo.FinalizedHeight; height++ {
-		if err := is.indexBlock(ctx, height); err != nil {
-			return err
-		}
-		is.lastIndexed = height
-		slog.Info("Indexed new block", "height", height)
-	}
-
-	return nil
 }
 
 func (is *IndexerService) indexBlock(ctx context.Context, height uint64) error {

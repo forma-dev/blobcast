@@ -9,7 +9,6 @@ var (
 	flagDbConnString string
 	flagNodeGRPC     string
 	flagStartHeight  uint64
-	flagSyncInterval string
 )
 
 var indexerCmd = &cobra.Command{

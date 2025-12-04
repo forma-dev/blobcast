@@ -327,5 +327,12 @@ func (bc *BlobcastChain) commitBatch(processedBlocks map[uint64]*processedBlockD
 	}
 
 	slog.Info("committed batch successfully", "blocks", len(heights), "finalized_height", maxHeight)
+
+	// Publish headers for all blocks in the batch to subscribers
+	for _, height := range heights {
+		data := processedBlocks[height]
+		bc.publishNewHeader(data.block.Header)
+	}
+
 	return nil
 }

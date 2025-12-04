@@ -12,6 +12,8 @@ import "blobcast/rollupapis/v1/get_latest_block_request.proto";
 import "blobcast/rollupapis/v1/get_latest_block_response.proto";
 import "blobcast/rollupapis/v1/get_chain_info_request.proto";
 import "blobcast/rollupapis/v1/get_chain_info_response.proto";
+import "blobcast/rollupapis/v1/subscribe_to_headers_request.proto";
+import "blobcast/rollupapis/v1/subscribe_to_headers_response.proto";
 import "google/api/annotations.proto";
 
 service RollupService {
@@ -38,4 +40,6 @@ service RollupService {
       get: "/v1/rollup/chain/info"
     };
   }
+
+  rpc SubscribeToHeaders(SubscribeToHeadersRequest) returns (stream SubscribeToHeadersResponse);
 }

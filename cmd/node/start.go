@@ -77,7 +77,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	grpcServer := grpc.NewServer()
 	pbStorageapisV1.RegisterStorageServiceServer(grpcServer, storage.NewStorageServiceServer())
-	pbRollupapisV1.RegisterRollupServiceServer(grpcServer, rollup.NewRollupServiceServer(chainState))
+	pbRollupapisV1.RegisterRollupServiceServer(grpcServer, rollup.NewRollupServiceServer(chainState, blobcastChain))
 	pbSyncapisV1.RegisterSyncServiceServer(grpcServer, grpcSync.NewSyncServiceServer(chainState))
 
 	// Start gRPC server in a goroutine

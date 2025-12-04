@@ -25,34 +25,39 @@ var File_blobcast_rollupapis_v1_rollup_service_proto protoreflect.FileDescriptor
 
 const file_blobcast_rollupapis_v1_rollup_service_proto_rawDesc = "" +
 	"\n" +
-	"+blobcast/rollupapis/v1/rollup_service.proto\x12\x16blobcast.rollupapis.v1\x1a8blobcast/rollupapis/v1/get_block_by_height_request.proto\x1a9blobcast/rollupapis/v1/get_block_by_height_response.proto\x1a6blobcast/rollupapis/v1/get_block_by_hash_request.proto\x1a7blobcast/rollupapis/v1/get_block_by_hash_response.proto\x1a5blobcast/rollupapis/v1/get_latest_block_request.proto\x1a6blobcast/rollupapis/v1/get_latest_block_response.proto\x1a3blobcast/rollupapis/v1/get_chain_info_request.proto\x1a4blobcast/rollupapis/v1/get_chain_info_response.proto\x1a\x1cgoogle/api/annotations.proto2\xea\x04\n" +
+	"+blobcast/rollupapis/v1/rollup_service.proto\x12\x16blobcast.rollupapis.v1\x1a8blobcast/rollupapis/v1/get_block_by_height_request.proto\x1a9blobcast/rollupapis/v1/get_block_by_height_response.proto\x1a6blobcast/rollupapis/v1/get_block_by_hash_request.proto\x1a7blobcast/rollupapis/v1/get_block_by_hash_response.proto\x1a5blobcast/rollupapis/v1/get_latest_block_request.proto\x1a6blobcast/rollupapis/v1/get_latest_block_response.proto\x1a3blobcast/rollupapis/v1/get_chain_info_request.proto\x1a4blobcast/rollupapis/v1/get_chain_info_response.proto\x1a9blobcast/rollupapis/v1/subscribe_to_headers_request.proto\x1a:blobcast/rollupapis/v1/subscribe_to_headers_response.proto\x1a\x1cgoogle/api/annotations.proto2\xe9\x05\n" +
 	"\rRollupService\x12\xa0\x01\n" +
 	"\x10GetBlockByHeight\x12/.blobcast.rollupapis.v1.GetBlockByHeightRequest\x1a0.blobcast.rollupapis.v1.GetBlockByHeightResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/rollup/blocks/height/{height}\x12\x96\x01\n" +
 	"\x0eGetBlockByHash\x12-.blobcast.rollupapis.v1.GetBlockByHashRequest\x1a..blobcast.rollupapis.v1.GetBlockByHashResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/rollup/blocks/hash/{hash}\x12\x91\x01\n" +
 	"\x0eGetLatestBlock\x12-.blobcast.rollupapis.v1.GetLatestBlockRequest\x1a..blobcast.rollupapis.v1.GetLatestBlockResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/rollup/blocks/latest\x12\x88\x01\n" +
-	"\fGetChainInfo\x12+.blobcast.rollupapis.v1.GetChainInfoRequest\x1a,.blobcast.rollupapis.v1.GetChainInfoResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/rollup/chain/infoB@Z>github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1b\x06proto3"
+	"\fGetChainInfo\x12+.blobcast.rollupapis.v1.GetChainInfoRequest\x1a,.blobcast.rollupapis.v1.GetChainInfoResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/rollup/chain/info\x12}\n" +
+	"\x12SubscribeToHeaders\x121.blobcast.rollupapis.v1.SubscribeToHeadersRequest\x1a2.blobcast.rollupapis.v1.SubscribeToHeadersResponse0\x01B@Z>github.com/forma-dev/blobcast/pkg/proto/blobcast/rollupapis/v1b\x06proto3"
 
 var file_blobcast_rollupapis_v1_rollup_service_proto_goTypes = []any{
-	(*GetBlockByHeightRequest)(nil),  // 0: blobcast.rollupapis.v1.GetBlockByHeightRequest
-	(*GetBlockByHashRequest)(nil),    // 1: blobcast.rollupapis.v1.GetBlockByHashRequest
-	(*GetLatestBlockRequest)(nil),    // 2: blobcast.rollupapis.v1.GetLatestBlockRequest
-	(*GetChainInfoRequest)(nil),      // 3: blobcast.rollupapis.v1.GetChainInfoRequest
-	(*GetBlockByHeightResponse)(nil), // 4: blobcast.rollupapis.v1.GetBlockByHeightResponse
-	(*GetBlockByHashResponse)(nil),   // 5: blobcast.rollupapis.v1.GetBlockByHashResponse
-	(*GetLatestBlockResponse)(nil),   // 6: blobcast.rollupapis.v1.GetLatestBlockResponse
-	(*GetChainInfoResponse)(nil),     // 7: blobcast.rollupapis.v1.GetChainInfoResponse
+	(*GetBlockByHeightRequest)(nil),    // 0: blobcast.rollupapis.v1.GetBlockByHeightRequest
+	(*GetBlockByHashRequest)(nil),      // 1: blobcast.rollupapis.v1.GetBlockByHashRequest
+	(*GetLatestBlockRequest)(nil),      // 2: blobcast.rollupapis.v1.GetLatestBlockRequest
+	(*GetChainInfoRequest)(nil),        // 3: blobcast.rollupapis.v1.GetChainInfoRequest
+	(*SubscribeToHeadersRequest)(nil),  // 4: blobcast.rollupapis.v1.SubscribeToHeadersRequest
+	(*GetBlockByHeightResponse)(nil),   // 5: blobcast.rollupapis.v1.GetBlockByHeightResponse
+	(*GetBlockByHashResponse)(nil),     // 6: blobcast.rollupapis.v1.GetBlockByHashResponse
+	(*GetLatestBlockResponse)(nil),     // 7: blobcast.rollupapis.v1.GetLatestBlockResponse
+	(*GetChainInfoResponse)(nil),       // 8: blobcast.rollupapis.v1.GetChainInfoResponse
+	(*SubscribeToHeadersResponse)(nil), // 9: blobcast.rollupapis.v1.SubscribeToHeadersResponse
 }
 var file_blobcast_rollupapis_v1_rollup_service_proto_depIdxs = []int32{
 	0, // 0: blobcast.rollupapis.v1.RollupService.GetBlockByHeight:input_type -> blobcast.rollupapis.v1.GetBlockByHeightRequest
 	1, // 1: blobcast.rollupapis.v1.RollupService.GetBlockByHash:input_type -> blobcast.rollupapis.v1.GetBlockByHashRequest
 	2, // 2: blobcast.rollupapis.v1.RollupService.GetLatestBlock:input_type -> blobcast.rollupapis.v1.GetLatestBlockRequest
 	3, // 3: blobcast.rollupapis.v1.RollupService.GetChainInfo:input_type -> blobcast.rollupapis.v1.GetChainInfoRequest
-	4, // 4: blobcast.rollupapis.v1.RollupService.GetBlockByHeight:output_type -> blobcast.rollupapis.v1.GetBlockByHeightResponse
-	5, // 5: blobcast.rollupapis.v1.RollupService.GetBlockByHash:output_type -> blobcast.rollupapis.v1.GetBlockByHashResponse
-	6, // 6: blobcast.rollupapis.v1.RollupService.GetLatestBlock:output_type -> blobcast.rollupapis.v1.GetLatestBlockResponse
-	7, // 7: blobcast.rollupapis.v1.RollupService.GetChainInfo:output_type -> blobcast.rollupapis.v1.GetChainInfoResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	4, // 4: blobcast.rollupapis.v1.RollupService.SubscribeToHeaders:input_type -> blobcast.rollupapis.v1.SubscribeToHeadersRequest
+	5, // 5: blobcast.rollupapis.v1.RollupService.GetBlockByHeight:output_type -> blobcast.rollupapis.v1.GetBlockByHeightResponse
+	6, // 6: blobcast.rollupapis.v1.RollupService.GetBlockByHash:output_type -> blobcast.rollupapis.v1.GetBlockByHashResponse
+	7, // 7: blobcast.rollupapis.v1.RollupService.GetLatestBlock:output_type -> blobcast.rollupapis.v1.GetLatestBlockResponse
+	8, // 8: blobcast.rollupapis.v1.RollupService.GetChainInfo:output_type -> blobcast.rollupapis.v1.GetChainInfoResponse
+	9, // 9: blobcast.rollupapis.v1.RollupService.SubscribeToHeaders:output_type -> blobcast.rollupapis.v1.SubscribeToHeadersResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -71,6 +76,8 @@ func file_blobcast_rollupapis_v1_rollup_service_proto_init() {
 	file_blobcast_rollupapis_v1_get_latest_block_response_proto_init()
 	file_blobcast_rollupapis_v1_get_chain_info_request_proto_init()
 	file_blobcast_rollupapis_v1_get_chain_info_response_proto_init()
+	file_blobcast_rollupapis_v1_subscribe_to_headers_request_proto_init()
+	file_blobcast_rollupapis_v1_subscribe_to_headers_response_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
