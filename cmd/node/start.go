@@ -80,10 +80,17 @@ func runStart(cmd *cobra.Command, args []string) error {
 	pbRollupapisV1.RegisterRollupServiceServer(grpcServer, rollup.NewRollupServiceServer(chainState))
 	pbSyncapisV1.RegisterSyncServiceServer(grpcServer, grpcSync.NewSyncServiceServer(chainState))
 
+	// Start gRPC server in a goroutine
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {
 			slog.Error("error serving gRPC server", "error", err)
 		}
+	}()
+
+	// Ensure gRPC server is gracefully stopped
+	defer func() {
+		slog.Info("Shutting down gRPC server")
+		grpcServer.GracefulStop()
 	}()
 
 	slog.Info("Starting blobcast chain")
