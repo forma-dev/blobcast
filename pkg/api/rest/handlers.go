@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -65,6 +66,7 @@ type FileReferenceResponse struct {
 func (s *Server) getChainInfo(w http.ResponseWriter, r *http.Request) {
 	chainInfo, err := s.rollupClient.GetChainInfo(context.Background(), &pbRollupapisV1.GetChainInfoRequest{})
 	if err != nil {
+		slog.Error("Failed to get chain info", "error", err)
 		http.Error(w, "Failed to get chain info", http.StatusInternalServerError)
 		return
 	}
