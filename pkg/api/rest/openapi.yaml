@@ -11,6 +11,8 @@ info:
     url: https://github.com/forma-dev/blobcast/blob/main/LICENSE
 
 servers:
+  - url: https://api.blobcast-mocha-1.forma.art
+    description: Blobcast Testnet
   - url: http://localhost:8081
     description: Local development server
 
