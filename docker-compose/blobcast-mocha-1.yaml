@@ -1,16 +1,14 @@
-version: '3.8'
-
 services:
   celestia:
-    image: ghcr.io/celestiaorg/celestia-node:v0.23.1-mocha
+    image: ghcr.io/celestiaorg/celestia-node:v0.28.4-mocha
     container_name: celestia-light
     command: |
       sh -c '
       if [ ! -f /home/celestia/.initialized ]; then
         echo "Initializing Celestia light node..."
         celestia light init --p2p.network mocha
-        sed -i "s/SampleFrom = .*/SampleFrom = 6383285/" /home/celestia/config.toml
-        sed -i "s/TrustedHash = .*/TrustedHash = \"1DADE6F3C855ECD09066CA1DF31F9E492D326EE6BB9FA2984695ECD70D3145A9\"/" /home/celestia/config.toml
+        sed -i "s/SyncFromHeight = .*/SyncFromHeight = 6383285/" /home/celestia/config.toml
+        sed -i "s/SyncFromHash = .*/SyncFromHash = \"1DADE6F3C855ECD09066CA1DF31F9E492D326EE6BB9FA2984695ECD70D3145A9\"/" /home/celestia/config.toml
         touch /home/celestia/.initialized
       fi
       echo "Starting Celestia light node..."
