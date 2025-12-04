@@ -167,17 +167,65 @@ func (s *ChainState) GetBlockByHash(hash HashKey) (*types.Block, error) {
 	return s.GetBlock(height)
 }
 
+// HasStateMMRAtHeight checks if an MMR snapshot exists at the exact height (not inherited)
+func (s *ChainState) HasStateMMRAtHeight(height uint64) (bool, error) {
+	if height == 0 {
+		return false, nil
+	}
+
+	key := prefixHeightKey(height, s.stateMMRPrefix)
+	_, closer, err := s.db.Get(key)
+	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	closer.Close()
+	return true, nil
+}
+
 func (s *ChainState) GetStateMMR(height uint64) (*mmr.MMR, error) {
 	if height == 0 {
 		return mmr.NewMMR(), nil
 	}
 
+	// Try exact height first (fast path for when MMR exists)
 	key := prefixHeightKey(height, s.stateMMRPrefix)
 	mmrBytes, closer, err := s.db.Get(key)
-	if err != nil {
+
+	if err == nil {
+		defer closer.Close()
+		// Make a copy since the slice becomes invalid after closer.Close()
+		mmrBytesCopy := make([]byte, len(mmrBytes))
+		copy(mmrBytesCopy, mmrBytes)
+
+		mmr, err := mmr.NewMMRFromSnapshot(mmrBytesCopy)
+		if err != nil {
+			return nil, err
+		}
+		return mmr, nil
+	}
+
+	if !errors.Is(err, pebble.ErrNotFound) {
 		return nil, err
 	}
-	defer closer.Close()
+
+	// MMR not found at exact height, use iterator to find most recent MMR <= height
+	iter, _ := s.db.NewIter(&pebble.IterOptions{
+		LowerBound: s.stateMMRPrefix,
+		UpperBound: prefixHeightKey(height+1, s.stateMMRPrefix),
+	})
+	defer iter.Close()
+
+	// Seek to the end of our range and work backwards
+	if !iter.Last() {
+		return nil, fmt.Errorf("no MMR found at or before height %d", height)
+	}
+
+	// iter is now at the most recent MMR <= height
+	mmrBytes = make([]byte, len(iter.Value()))
+	copy(mmrBytes, iter.Value())
 
 	mmr, err := mmr.NewMMRFromSnapshot(mmrBytes)
 	if err != nil {

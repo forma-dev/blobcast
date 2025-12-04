@@ -45,13 +45,22 @@ func (s *SyncServiceServer) StreamBlocks(req *pbSyncapisV1.StreamBlocksRequest, 
 			return status.Errorf(codes.NotFound, "block at height %d not found", height)
 		}
 
+		// Only send MMR snapshot if one exists at this exact height
+		// (empty blocks don't have their own MMR, they inherit from previous blocks)
 		var mmrSnapshot []byte
 		if height > 0 {
-			mmr, err := s.chainState.GetStateMMR(height)
+			hasMMR, err := s.chainState.HasStateMMRAtHeight(height)
 			if err != nil {
-				return status.Errorf(codes.Internal, "error getting state mmr at height %d: %v", height, err)
+				return status.Errorf(codes.Internal, "error checking state mmr at height %d: %v", height, err)
 			}
-			mmrSnapshot = mmr.Snapshot()
+
+			if hasMMR {
+				mmr, err := s.chainState.GetStateMMR(height)
+				if err != nil {
+					return status.Errorf(codes.Internal, "error getting state mmr at height %d: %v", height, err)
+				}
+				mmrSnapshot = mmr.Snapshot()
+			}
 		}
 
 		chunks := make([]*pbSyncapisV1.ChunkWithHash, len(block.Body.Chunks))

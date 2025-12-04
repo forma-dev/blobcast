@@ -272,21 +272,30 @@ func (bc *BlobcastChain) ApplyBlock(ctx context.Context, tx *state.ChainStateTra
 			return fmt.Errorf("error getting state mmr: %v", err)
 		}
 
+		// Track if MMR changes to avoid storing duplicates
+		mmrChanged := false
+
 		// add the dirs, files, and chunks merkle roots to the state root, if they exist
 		if !block.Header.DirsRoot.IsZero() {
 			stateMMR.AddLeaf(block.Header.DirsRoot.Bytes())
+			mmrChanged = true
 		}
 		if !block.Header.FilesRoot.IsZero() {
 			stateMMR.AddLeaf(block.Header.FilesRoot.Bytes())
+			mmrChanged = true
 		}
 		if !block.Header.ChunksRoot.IsZero() {
 			stateMMR.AddLeaf(block.Header.ChunksRoot.Bytes())
+			mmrChanged = true
 		}
 
 		block.Header.StateRoot = stateMMR.Root()
 
-		if err := tx.PutStateMMR(block.Height(), stateMMR); err != nil {
-			return fmt.Errorf("error putting state mmr: %v", err)
+		// Only store MMR if it actually changed (has new data)
+		if mmrChanged {
+			if err := tx.PutStateMMR(block.Height(), stateMMR); err != nil {
+				return fmt.Errorf("error putting state mmr: %v", err)
+			}
 		}
 	}
 
