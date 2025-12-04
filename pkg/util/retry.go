@@ -173,6 +173,7 @@ func IsNetworkError(err error) bool {
 		"i/o timeout",
 		"temporary failure",
 		"broken pipe",
+		"syncing in progress", // Celestia node is still syncing
 	}
 
 	errStr := err.Error()
