@@ -30,14 +30,17 @@ RUN export CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} && \
     -o build/blobcast .
 
 # Runtime stage
-FROM alpine:latest
+FROM --platform=$TARGETPLATFORM alpine:latest
 
 ARG UID=10001
 ARG USER_NAME=blobcast
+ARG TARGETPLATFORM
 
 ENV BLOBCAST_HOME=/app/${USER_NAME}
 
-RUN apk update && apk add --no-cache bash ca-certificates
+RUN apk update && \
+    apk add --no-cache --no-scripts bash ca-certificates && \
+    update-ca-certificates
 
 RUN adduser ${USER_NAME} \
   -D \
